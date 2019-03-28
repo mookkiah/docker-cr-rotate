@@ -13,6 +13,7 @@ import signal
 # ------------------------------------
 import string
 import tarfile
+import shutil
 def main():
     # Directory of Cache Refresh LDIF
     directory = "/cr/ldif"
@@ -113,8 +114,12 @@ def main():
             first_default_network_name = str(network_dict.keys()[0])
             ip = low_client.inspect_container(container.id)['NetworkSettings']['Networks'][first_default_network_name][
                 'IPAddress'].strip()
+            if is_cr_enabled < 0 :
+            # The user has disabled the CR
+            # Check if the path for the LDIF exists and if so remove it
+                if os.path.isdir(directory): shutil.rmtree(directory)
             # Check  the container has not been setup previosly, the CR is enabled
-            if ip != current_ip_in_ldap and is_cr_enabled >= 0:
+            elif ip != current_ip_in_ldap and is_cr_enabled >= 0:
                 if not os.path.isdir(directory): os.makedirs(directory)
                 # Clear contents of file at CR rotate container
                 open(directory + filename, 'w').close()
@@ -140,8 +145,6 @@ def main():
                 print ldap_modify_status
                 # Clean up files
                 ldap_containers[0].exec_run('rm -rf ' + directory + filename)
-                # Clear contents of file at CR rotate container
-                open(directory + filename, 'w').close()
 
 
 # ------------------------------------
