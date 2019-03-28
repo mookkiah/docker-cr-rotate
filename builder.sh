@@ -2,12 +2,12 @@
 
 set -e
 
-GLUU_VERSION=3.1.4
+GLUU_VERSION=3.1.5
 IMAGE_NAME="gluufederation/cr-rotate"
 UNSTABLE_VERSION="dev"
 STABLE_VERSION=${STABLE_VERSION:-""}
 
-# force to use branch 3.1.4
+# force to use branch 3.1.5
 echo "[I] Switching to git branch ${GLUU_VERSION}"
 git checkout $GLUU_VERSION
 
