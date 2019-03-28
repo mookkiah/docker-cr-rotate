@@ -9,11 +9,34 @@ import base64
 import docker
 import os
 import pyDes
-import signal
+# import signal
 # ------------------------------------
-import string
+# import string
 import tarfile
 import shutil
+
+
+# Function to copy files from source to destination
+def copy_to(src, container, dst):
+    os.chdir(os.path.dirname(src))
+    srcname = os.path.basename(src)
+    tar = tarfile.open(src + '.tar', mode='w')
+    try:
+        tar.add(srcname)
+    finally:
+        tar.close()
+    data = open(src + '.tar', 'rb').read()
+    container.put_archive(os.path.dirname(dst), data)
+
+
+# Function to decrypt encoded password
+def decrypt_text(encrypted_text, key):
+    cipher = pyDes.triple_des(b"{}".format(key), pyDes.ECB,
+                              padmode=pyDes.PAD_PKCS5)
+    encrypted_text = b"{}".format(base64.b64decode(encrypted_text))
+    return cipher.decrypt(encrypted_text)
+
+
 def main():
     # Directory of Cache Refresh LDIF
     directory = "/cr/ldif"
@@ -22,7 +45,7 @@ def main():
     # Docker URL
     docker_url = 'unix://var/run/docker.sock'
     # Salt file location
-    salt_location = '/etc/gluu/conf/salt'
+    # salt_location = '/etc/gluu/conf/salt'
     # Docker Client
     client = docker.DockerClient(base_url=docker_url)
     # Low level API client
@@ -35,44 +58,28 @@ def main():
     salt_code = ''
     bind_password = ''
 
-    # Function to copy files from source to destination
-    def copy_to(src, container, dst):
-        os.chdir(os.path.dirname(src))
-        srcname = os.path.basename(src)
-        tar = tarfile.open(src + '.tar', mode='w')
-        try:
-            tar.add(srcname)
-        finally:
-            tar.close()
-        data = open(src + '.tar', 'rb').read()
-        container.put_archive(os.path.dirname(dst), data)
-
-    # Function to decrypt encoded password
-    def decrypt_text(encrypted_text, key):
-        cipher = pyDes.triple_des(b"{}".format(key), pyDes.ECB,
-                                  padmode=pyDes.PAD_PKCS5)
-        encrypted_text = b"{}".format(base64.b64decode(encrypted_text))
-        return cipher.decrypt(encrypted_text)
-
     for container in client.containers.list():
         # if there exists an index number for oxtrust append it to the oxtrust list
-        if container.name.find("oxtrust") >= 0:
+        if container.name.find("oxtrust"}) >= 0:
             oxtrust_containers.append(container)
         # if there exists an index number for ldap append it to the ldap list
         elif container.name.find("ldap") >= 0:
             ldap_containers.append(container)
+
     # Get encoded password
     for oxtrust_container in oxtrust_containers:
         # Return the ox-ldap.properties file as a list
         oxldap_prop_list = oxtrust_container.exec_run('cat /etc/gluu/conf/ox-ldap.properties').output.split()
         # Return the salt file as a list
         salt_list = oxtrust_container.exec_run('cat /etc/gluu/conf/salt').output.split()
+
         # Check if there exists a salt code in the salt list, if so set salt_code to it
         if ''.join(salt_list).find('=') >= 0:
             salt_code = salt_list[salt_list.index('=') + 1]
         # Currently print but needs to be appended  to the oxtrust log file
         else:
             print " Encoded salt cannot be found"
+
         # Check if there exists a an encoded bind password in the ox-ldap.properties, if so set encoded password to it
         if ''.join(oxldap_prop_list).find('bindPassword') >= 0:
             bind_password_encoded = oxldap_prop_list[oxldap_prop_list.index('bindPassword:') + 1]
@@ -81,6 +88,7 @@ def main():
         # Currently print but needs to be appended to the oxtrust log file
         else:
             print "Bind Password cannot be found"
+
     if bind_password:
         # Return oxtrust server DN
         server_dn = ldap_containers[0].exec_run(
@@ -97,8 +105,7 @@ def main():
                 bind_password) + ' -b "ou=appliances,o=gluu"  "gluuIpAddress=*" gluuIpAddress \ | '
                                  'grep -E -o "([0-9]{1,3}[\.]){3}[0-9]{1,3}"').output.strip()
         # From the oxtrust conf cache refresh extract cache refresh conf
-        cache_refresh_conf = oxtrust_conf_cache_refresh[
-                             oxtrust_conf_cache_refresh.find("oxTrustConfCacheRefresh: {"):].strip()
+        cache_refresh_conf = oxtrust_conf_cache_refresh[oxtrust_conf_cache_refresh.find("oxTrustConfCacheRefresh: {"):].strip()
         # From the oxtrust conf cache refresh extract oxtrust conf cache refresh DN
         conf_dn = oxtrust_conf_cache_refresh[oxtrust_conf_cache_refresh.find("dn:"):oxtrust_conf_cache_refresh.find(
             "oxTrustConfCacheRefresh")].strip()
@@ -108,19 +115,24 @@ def main():
                 bind_password) + ' -b "ou=appliances,o=gluu" "gluuVdsCacheRefreshEnabled=*" '
                                  'gluuVdsCacheRefreshEnabled \ | grep -Pzo "enabled"').output.find(
             "enabled")
-        container_setup_boolean = False
+
+        # container_setup_boolean = False
         for container in oxtrust_containers:
             network_dict = low_client.inspect_container(container.id)['NetworkSettings']['Networks']
             first_default_network_name = str(network_dict.keys()[0])
             ip = low_client.inspect_container(container.id)['NetworkSettings']['Networks'][first_default_network_name][
                 'IPAddress'].strip()
-            if is_cr_enabled < 0 :
-            # The user has disabled the CR
-            # Check if the path for the LDIF exists and if so remove it
-                if os.path.isdir(directory): shutil.rmtree(directory)
+
+            if is_cr_enabled < 0:
+                # The user has disabled the CR
+                # Check if the path for the LDIF exists and if so remove it
+                if os.path.isdir(directory):
+                    shutil.rmtree(directory)
             # Check  the container has not been setup previosly, the CR is enabled
             elif ip != current_ip_in_ldap and is_cr_enabled >= 0:
-                if not os.path.isdir(directory): os.makedirs(directory)
+                if not os.path.isdir(directory):
+                    os.makedirs(directory)
+
                 # Clear contents of file at CR rotate container
                 open(directory + filename, 'w').close()
                 # Format and concatenate ldifdata
@@ -129,6 +141,7 @@ def main():
                                  "oxTrustCacheRefreshServerIpAddress: " + str(
                     ip) + "\n\n" + str(conf_dn) + "\nchangetype: modify\nreplace: oxTrustConfCacheRefresh\n" + str(
                     cache_refresh_conf)
+
                 ldif = open(directory + filename, "w+")
                 ldif.write(ldifdata)
                 ldif.close()
