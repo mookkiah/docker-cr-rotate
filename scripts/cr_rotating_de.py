@@ -65,7 +65,7 @@ def main():
         # if there exists an index number for ldap append it to the ldap list
         elif container.name.find("ldap") >= 0:
             ldap_containers.append(container)
-
+    if len(ldap_containers) == 0: print "No LDAP found"
     # Get encoded password
     for oxtrust_container in oxtrust_containers:
         # Return the ox-ldap.properties file as a list
@@ -89,7 +89,7 @@ def main():
         else:
             print "Bind Password cannot be found"
 
-    if bind_password:
+    if len(bind_password)>0:
         # Return oxtrust server DN
         server_dn = ldap_containers[0].exec_run(
             '/opt/opendj/bin/ldapsearch -h localhost -p 1636 -Z -X -D "cn=directory manager" -w ' + str(
