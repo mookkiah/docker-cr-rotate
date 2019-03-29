@@ -60,7 +60,7 @@ def main():
 
     for container in client.containers.list():
         # if there exists an index number for oxtrust append it to the oxtrust list
-        if container.name.find("oxtrust"}) >= 0:
+        if container.name.find("oxtrust") >= 0:
             oxtrust_containers.append(container)
         # if there exists an index number for ldap append it to the ldap list
         elif container.name.find("ldap") >= 0:
