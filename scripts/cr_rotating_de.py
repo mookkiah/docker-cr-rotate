@@ -154,7 +154,7 @@ def main():
                 container.exec_run('mkdir /var/ox/identity/cr-snapshots/')
                 container.exec_run('chown -R jetty:jetty /var/ox/identity/cr-snapshots/')
                 ldap_containers[0].exec_run(' mkdir -p ' + directory)
-                copy_to(directory + filename, ldap_containers[0], '/cr/ldif')
+                copy_to(directory + filename, ldap_containers[0], directory + filename)
                 ldap_modify_status = ldap_containers[0].exec_run(
                     '/opt/opendj/bin/ldapmodify -D "cn=directory manager" -w ' + bind_password +
                     ' -h localhost -p 1636 --useSSL --trustAll -f ' + directory + filename).output
