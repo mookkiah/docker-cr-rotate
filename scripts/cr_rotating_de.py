@@ -59,12 +59,16 @@ def main():
     bind_password = ''
 
     for container in client.containers.list():
-        # if there exists an index number for oxtrust append it to the oxtrust list
-        if container.name.find("oxtrust") >= 0:
-            oxtrust_containers.append(container)
-        # if there exists an index number for ldap append it to the ldap list
-        elif container.name.find("ldap") >= 0:
-            ldap_containers.append(container)
+        try:
+            Label = low_client.inspect_container(container.id)['Config']['Labels']['com.docker.swarm.service.name']
+        except:
+            print 'No Labelss found for ' + str(container.name)
+            Label = ''
+        if len(Label) > 0:
+            if "gluu_oxtrust" in Label:
+                oxtrust_containers.append(container)
+            elif "gluu_ldap" in Label:
+                ldap_containers.append(container)
     if len(ldap_containers) == 0: print "No LDAP found"
     # Get encoded password
     for oxtrust_container in oxtrust_containers:
