@@ -9,13 +9,10 @@ import base64
 import docker
 import os
 import pyDes
-# import signal
-# ------------------------------------
-# import string
 import tarfile
 import shutil
-
-
+from ldap3 import Server, Connection, MODIFY_REPLACE, MODIFY_ADD, MODIFY_DELETE, SUBTREE, ALL, BASE, LEVEL
+from gluulib import get_manager
 # Function to copy files from source to destination
 def copy_to(src, container, dst):
     os.chdir(os.path.dirname(src))
@@ -27,16 +24,12 @@ def copy_to(src, container, dst):
         tar.close()
     data = open(src + '.tar', 'rb').read()
     container.put_archive(os.path.dirname(dst), data)
-
-
 # Function to decrypt encoded password
 def decrypt_text(encrypted_text, key):
     cipher = pyDes.triple_des(b"{}".format(key), pyDes.ECB,
                               padmode=pyDes.PAD_PKCS5)
     encrypted_text = b"{}".format(base64.b64decode(encrypted_text))
     return cipher.decrypt(encrypted_text)
-
-
 def main():
     # Directory of Cache Refresh LDIF
     directory = "/cr/ldif"
@@ -57,7 +50,10 @@ def main():
     bind_password_encoded = ''
     salt_code = ''
     bind_password = ''
-
+    #-------Method 2 LDAP ------------
+    manager = get_manager()
+    GLUU_LDAP_URL = os.environ.get("GLUU_LDAP_URL", "localhost:1636")
+    # -------END_Method 2 LDAP ------------
     for container in client.containers.list():
         try:
             Label = low_client.inspect_container(container.id)['Config']['Labels']['com.docker.swarm.service.name']
@@ -92,8 +88,18 @@ def main():
         # Currently print but needs to be appended to the oxtrust log file
         else:
             print "Bind Password cannot be found"
-
-    if len(bind_password)>0:
+    # if bind pass is empty using the method above try
+    # ------- Method 2 using consul ----------
+    try:
+        bind_dn_ldap = manager.config.get("ldap_binddn")
+        bind_password_ldap = decrypt_text(manager.secret.get("encoded_ox_ldap_pw"),manager.secret.get("encoded_salt"))
+        ldap_server_ldap = Server(GLUU_LDAP_URL, port=1636, use_ssl=True)
+        conn_ldap = Connection(ldap_server, bind_dn, bind_password)
+        conn_ldap.bind()
+    except Exception as err:
+        print err
+    # ------- END_Method 2 using consul ----------
+    if len(bind_password) > 0:
         # Return oxtrust server DN
         server_dn = ldap_containers[0].exec_run(
             '/opt/opendj/bin/ldapsearch -h localhost -p 1636 -Z -X -D "cn=directory manager" -w ' + str(
@@ -119,24 +125,48 @@ def main():
                 bind_password) + ' -b "ou=appliances,o=gluu" "gluuVdsCacheRefreshEnabled=*" '
                                  'gluuVdsCacheRefreshEnabled \ | grep -Pzo "enabled"').output.find(
             "enabled")
-
-        # container_setup_boolean = False
+        # ------- Method 2 LDAP -------
+        # Return oxtrust conf cache refresh
+        try:
+            conn_ldap.search('o=gluu', '(objectclass=oxTrustConfiguration)', attributes='oxTrustConfCacheRefresh')
+            oxtrust_conf_cache_refresh_LDAP = str(conn.entries[0]).strip()
+            cache_refresh_conf_ldap = oxtrust_conf_cache_refresh_LDAP[
+                                 oxtrust_conf_cache_refresh_LDAP.find("oxTrustConfCacheRefresh: {"):].strip("\n")
+            conn.search_ldap('ou=appliances,o=gluu', '(objectclass=gluuAppliance)', attributes='inum')
+            server_dn_LDAP = str(conn.entries[0]).strip()
+            server_dn_ldap = server_dn_LDAP[server_dn_LDAP.find("inum: "):].strip("\n")
+            server_dn_ldap = "inum=" + server_dn[server_dn.find("m:") + 3:]
+            conn_ldap.search('ou=appliances,o=gluu', '(objectclass=gluuAppliance)', attributes=['gluuIpAddress'])
+            current_ip_in_ldap_LDAP = str(conn.entries[0]).strip()
+            current_ip_in_ldap_ldap = current_ip_in_ldap_LDAP[current_ip_in_ldap_LDAP.find("gluuIpAddress: "):].strip("\n")
+            conn_ldap.search('ou=appliances,o=gluu', '(objectclass=gluuAppliance)', attributes=['gluuVdsCacheRefreshEnabled'])
+            is_cr_enabled_ldap_LDAP = str(conn.entries[0]).strip()
+            is_cr_enabled_ldap = is_cr_enabled_ldap_LDAP[is_cr_enabled_ldap_LDAP.find("gluuVdsCacheRefreshEnabled: "):].strip(
+                "\n")
+            conn_ldap.search('o=gluu', '(objectclass=gluuOrganization)', attributes=['o'])
+        except Exception as err:
+            print err
+        # ------- END_Method 2 LDAP -------
         for container in oxtrust_containers:
             network_dict = low_client.inspect_container(container.id)['NetworkSettings']['Networks']
             first_default_network_name = str(network_dict.keys()[0])
             ip = low_client.inspect_container(container.id)['NetworkSettings']['Networks'][first_default_network_name][
                 'IPAddress'].strip()
-
             if is_cr_enabled < 0:
                 # The user has disabled the CR
                 # Check if the path for the LDIF exists and if so remove it
                 if os.path.isdir(directory):
-                    shutil.rmtree(directory)
+                    try:
+                        shutil.rmtree(directory)
+                    except Exception as err:
+                        print err
             # Check  the container has not been setup previosly, the CR is enabled
-            elif ip != current_ip_in_ldap and is_cr_enabled >= 0:
+            if ip != current_ip_in_ldap and is_cr_enabled >= 0:
                 if not os.path.isdir(directory):
-                    os.makedirs(directory)
-
+                    try:
+                        os.makedirs(directory)
+                    except Exception as err:
+                        print err
                 # Clear contents of file at CR rotate container
                 open(directory + filename, 'w').close()
                 # Format and concatenate ldifdata
@@ -145,7 +175,6 @@ def main():
                                  "oxTrustCacheRefreshServerIpAddress: " + str(
                     ip) + "\n\n" + str(conf_dn) + "\nchangetype: modify\nreplace: oxTrustConfCacheRefresh\n" + str(
                     cache_refresh_conf)
-
                 ldif = open(directory + filename, "w+")
                 ldif.write(ldifdata)
                 ldif.close()
@@ -162,6 +191,18 @@ def main():
                 print ldap_modify_status
                 # Clean up files
                 ldap_containers[0].exec_run('rm -rf ' + directory + filename)
+                # ------- Method 2 LDAP -------
+                try:
+                    conn.modify(server_dn + ',ou=appliances,o=gluu',
+                                {'oxTrustCacheRefreshServerIpAddress': [(MODIFY_REPLACE, [ip])]})
+                    print "OxtrustCacheRefreshServerIpAddress was modified : output to oxtrust.log"
+                    print conn.result
+                    conn.modify('ou=oxtrust,ou=configuration,' + server_dn + ',ou=appliances,o=gluu',
+                                {'oxTrustConfCacheRefresh': [(MODIFY_REPLACE, [cache_refresh_conf])]})
+                    print "oxTrustConfCacheRefresh was modified : output to oxtrust.log"
+                except Exception as err:
+                    print err
+                # ------- END_Method 2 LDAP -------
 
 
 # ------------------------------------
