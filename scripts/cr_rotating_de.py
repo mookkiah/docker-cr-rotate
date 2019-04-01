@@ -56,14 +56,15 @@ def main():
     # -------END_Method 2 LDAP ------------
     for container in client.containers.list():
         try:
-            Label = low_client.inspect_container(container.id)['Config']['Labels']['com.docker.swarm.service.name']
-        except:
-            print 'No Labelss found for ' + str(container.name)
+            Label = low_client.inspect_container(container.id)['Config']['Labels']['APP_NAME']
+        except Exception as err:
+            print err
+            print 'No Labels found for ' + str(container.name)
             Label = ''
         if len(Label) > 0:
-            if "gluu_oxtrust" in Label:
+            if "oxtrust" in Label:
                 oxtrust_containers.append(container)
-            elif "gluu_ldap" in Label:
+            elif "ldap" in Label:
                 ldap_containers.append(container)
     if len(ldap_containers) == 0: print "No LDAP found"
     # Get encoded password
