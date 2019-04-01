@@ -64,7 +64,7 @@ def main():
         if len(Label) > 0:
             if "oxtrust" in Label:
                 oxtrust_containers.append(container)
-            elif "ldap" in Label:
+            elif "opendj" in Label:
                 ldap_containers.append(container)
     if len(ldap_containers) == 0: print "No LDAP found"
     # Get encoded password
