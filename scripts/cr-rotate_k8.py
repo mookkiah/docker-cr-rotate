@@ -185,15 +185,15 @@ def main():
                 ldif.close()
                 # Clean cache folder at oxtrust container
                 stream(cli.connect_get_namespaced_pod_exec, oxtrust_pod.metadata.name, oxtrust_pod.metadata.namespace,
-                       command=['/bin/sh','-c','rm -rf /var/ox/identity/cr-snapshots/'],
+                       command=['/bin/sh','-c','rm -rf /var/ox/identity/cr-snapshots'],
                        stderr=True, stdin=True,
                        stdout=True, tty=False)
                 stream(cli.connect_get_namespaced_pod_exec, oxtrust_pod.metadata.name, oxtrust_pod.metadata.namespace,
-                       command=['/bin/sh','-c','mkdir -p /var/ox/identity/cr-snapshots/'],
+                       command=['/bin/sh','-c','mkdir -p /var/ox/identity/cr-snapshots'],
                        stderr=True, stdin=True,
                        stdout=True, tty=False)
                 stream(cli.connect_get_namespaced_pod_exec, oxtrust_pod.metadata.name, oxtrust_pod.metadata.namespace,
-                       command=['/bin/sh','-c','chown -R jetty:jetty /var/ox/identity/cr-snapshots/'],
+                       command=['/bin/sh','-c','chown -R jetty:jetty /var/ox/identity/cr-snapshots'],
                        stderr=True, stdin=True,
                        stdout=True, tty=False)
                 stream(cli.connect_get_namespaced_pod_exec, ldap_pods[0].metadata.name, ldap_pods[0].metadata.namespace,
@@ -205,8 +205,8 @@ def main():
                            server_dn) + ' > ' + directory + filename + '\n echo changetype: modify >> ' + directory + filename +
                 '\n echo replace: oxTrustCacheRefreshServerIpAddress >> ' + directory + filename +
                                 '\n echo oxTrustCacheRefreshServerIpAddress: ' + str(
-                           ip) + ' >> ' + directory + filename + 'echo "/n" >> ' + directory + filename + '\n\n echo ' +
-                                'ou=oxtrust,ou=configuration,' + server_dn + ',ou=appliances,o=gluu' + ' >> ' + directory + filename + '\n echo changetype: modify >> ' + directory + filename +
+                           ip) + ' >> ' + directory + filename + 'echo "\n" >> ' + directory + filename + '\n\n echo ' +
+                                'ou=oxtrust,ou=configuration,' + server_dn[server_dn.find('dn:') + 3:] + ',ou=appliances,o=gluu' + ' >> ' + directory + filename + '\n echo changetype: modify >> ' + directory + filename +
                                 '\n echo replace: oxTrustConfCacheRefresh' + ' >> ' + directory + filename +
                                 '\n echo ' + cache_refresh_conf + ' >> ' + directory + filename],
                        stderr=True, stdin=False,
