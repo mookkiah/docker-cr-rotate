@@ -200,16 +200,20 @@ def main():
                        command=['/bin/sh','-c','mkdir -p ' + directory],
                        stderr=True, stdin=True,
                        stdout=True, tty=False)
-                writetoldif_command = [
-                    '/bin/sh',
-                    '-c',
-                    'echo ' + ldifdata + ' >> ' + directory + filename]
                 stream(cli.connect_get_namespaced_pod_exec, ldap_pods[0].metadata.name, ldap_pods[0].metadata.namespace,
-                              command=writetoldif_command,
+                       command=['/bin/sh', '-c', 'echo ' + str(
+                           server_dn) + '\nchangetype: modify\nreplace: oxTrustCacheRefreshServerIpAddress\n' +
+                                'oxTrustCacheRefreshServerIpAddress: ' + str(
+                           ip) + '\n\n' + str(
+                           server_dn) + '\nchangetype: modify\nreplace: oxTrustConfCacheRefresh\n' + ' >> ' + directory + filename],
+                       stderr=True, stdin=False,
+                       stdout=True, tty=False)
+                stream(cli.connect_get_namespaced_pod_exec, ldap_pods[0].metadata.name, ldap_pods[0].metadata.namespace,
+                              command=['/bin/sh', '-c', 'echo ' + str(cache_refresh_conf) + ' > ' + directory + filename],
                               stderr=True, stdin=False,
                               stdout=True, tty=False)
                 ldap_modify_status = stream(cli.connect_get_namespaced_pod_exec, ldap_pods[0].metadata.name, ldap_pods[0].metadata.namespace,
-                       command=['/bin/sh','-c','/opt/opendj/bin/ldapmodify -D "cn=directory manager" -w "' + bind_password +
+                       command=['/bin/sh', '-c', '/opt/opendj/bin/ldapmodify -D "cn=directory manager" -w "' + bind_password +
                     '" -h localhost -p 1636 --useSSL --trustAll -f ' + directory + filename],
                        stderr=True, stdin=True,
                        stdout=True, tty=False)
