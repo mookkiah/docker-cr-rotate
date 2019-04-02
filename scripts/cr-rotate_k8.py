@@ -187,19 +187,19 @@ def main():
                 ldif.write(ldifdata)
                 ldif.close()
                 # Clean cache folder at oxtrust container
-                stream(client.connect_get_namespaced_pod_exec, oxtrust_pod.metadata.name, oxtrust_pod.metadata.namespace,
+                stream(cli.connect_get_namespaced_pod_exec, oxtrust_pod.metadata.name, oxtrust_pod.metadata.namespace,
                        command=['/bin/sh','-c','rm -rf /var/ox/identity/cr-snapshots/'],
                        stderr=True, stdin=True,
                        stdout=True, tty=False)
-                stream(client.connect_get_namespaced_pod_exec, oxtrust_pod.metadata.name, oxtrust_pod.metadata.namespace,
+                stream(cli.connect_get_namespaced_pod_exec, oxtrust_pod.metadata.name, oxtrust_pod.metadata.namespace,
                        command=['/bin/sh','-c','mkdir /var/ox/identity/cr-snapshots/'],
                        stderr=True, stdin=True,
                        stdout=True, tty=False)
-                stream(client.connect_get_namespaced_pod_exec, oxtrust_pod.metadata.name, oxtrust_pod.metadata.namespace,
+                stream(cli.connect_get_namespaced_pod_exec, oxtrust_pod.metadata.name, oxtrust_pod.metadata.namespace,
                        command=['/bin/sh','-c','chown -R jetty:jetty /var/ox/identity/cr-snapshots/'],
                        stderr=True, stdin=True,
                        stdout=True, tty=False)
-                stream(client.connect_get_namespaced_pod_exec, ldap_pods[0].metadata.name, ldap_pods[0].metadata.namespace,
+                stream(cli.connect_get_namespaced_pod_exec, ldap_pods[0].metadata.name, ldap_pods[0].metadata.namespace,
                        command=['/bin/sh','-c','mkdir -p' + directory],
                        stderr=True, stdin=True,
                        stdout=True, tty=False)
@@ -207,11 +207,11 @@ def main():
                     '/bin/sh',
                     '-c',
                     'echo' + ldifdata + '>>' + directory+filename]
-                stream(api.connect_get_namespaced_pod_exec, ldap_pods[0].metadata.name, ldap_pods[0].metadata.namespace,
+                stream(cli.connect_get_namespaced_pod_exec, ldap_pods[0].metadata.name, ldap_pods[0].metadata.namespace,
                               command=writetoldif_command,
                               stderr=True, stdin=False,
                               stdout=True, tty=False)
-                ldap_modify_status = stream(client.connect_get_namespaced_pod_exec, ldap_pods[0].metadata.name, ldap_pods[0].metadata.namespace,
+                ldap_modify_status = stream(cli.connect_get_namespaced_pod_exec, ldap_pods[0].metadata.name, ldap_pods[0].metadata.namespace,
                        command=['/bin/sh','-c','/opt/opendj/bin/ldapmodify -D "cn=directory manager" -w "' + bind_password +
                     '" -h localhost -p 1636 --useSSL --trustAll -f ' + directory + filename + directory],
                        stderr=True, stdin=True,
