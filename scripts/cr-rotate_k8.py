@@ -108,7 +108,7 @@ def main():
         # Return oxtrust server DN
         server_dn = stream(cli.connect_get_namespaced_pod_exec, ldap_pods[0].metadata.name, ldap_pods[0].metadata.namespace,
                                   command=['/bin/sh', '-c', '/opt/opendj/bin/ldapsearch -h localhost -p 1636 -Z -X -D "cn=directory manager" -w ' + str(
-                bind_password) + ' -b "ou=appliances,o=gluu"  "inum=*" | grep dn)'],
+                bind_password) + ' -b "ou=appliances,o=gluu"  "inum=*" | grep dn'],
                                   stderr=True, stdin=True,
                                   stdout=True, tty=False).split()
         server_dn = ''.join(server_dn).strip()
@@ -153,8 +153,6 @@ def main():
         server_dn_LDAP = str(conn.entries[0]).strip()
         server_dn_ldap = server_dn_LDAP[server_dn_LDAP.find("inum: "):].strip("\n")
         server_dn_ldap = "inum=" + server_dn[server_dn.find("m:") + 3:]
-        conn_ldap.search('ou=appliances,o=gluu', '(objectclass=gluuAppliance)', attributes=['gluuIpAddress'])
-        current_ip_in_ldap_LDAP = str(conn.entries[0]).strip()
         # Change this
         current_ip_in_ldap_ldap = current_ip_in_ldap_LDAP[current_ip_in_ldap_LDAP.find("gluuIpAddress: "):].strip("\n")
         conn_ldap.search('ou=appliances,o=gluu', '(objectclass=gluuAppliance)', attributes=['gluuVdsCacheRefreshEnabled'])
@@ -165,6 +163,7 @@ def main():
         # ------- END_Method 2 LDAP -------
         for oxtrust_pod in oxtrust_pods:
             ip = oxtrust_pod.status.pod_ip
+            print ip
             if is_cr_enabled < 0:
                 # The user has disabled the CR
                 # Check if the path for the LDIF exists and if so remove it
