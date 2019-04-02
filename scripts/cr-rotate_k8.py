@@ -54,12 +54,10 @@ def main():
     # -------END_Method 2 LDAP ------------
     for pod in pods:
         try:
-            if "opendj" in pod.metadata.name:
+            if "opendj" in pod.metadata.labels['APP_NAME']:
                 ldap_pods.append(pod)
-                print pod.metadata.name
-            elif "oxtrust" in pod.metadata.name:
+            elif "oxtrust" in pod.metadata.labels['APP_NAME']:
                 oxtrust_pods.append(pod)
-                print pod.metadata.name
         except ApiException as e:
             if e.status != 404:
                 print("Unknown error: %s" % e)
