@@ -105,50 +105,37 @@ def main():
         print err
     # ------- END_Method 2 using consul ----------
     if len(bind_password) > 0:
-        server_dn = None
-        oxtrust_conf_cache_refresh = None
-        is_cr_enabled = None
+        # Return oxtrust server DN
+        server_dn = stream(cli.connect_get_namespaced_pod_exec, ldap_pods[0].metadata.name, ldap_pods[0].metadata.namespace,
+                                  command=['/bin/sh', '-c', '/opt/opendj/bin/ldapsearch -h localhost -p 1636 -Z -X -D "cn=directory manager" -w ' + str(
+                bind_password) + ' -b "ou=appliances,o=gluu"  "inum=*" | grep dn)'],
+                                  stderr=True, stdin=True,
+                                  stdout=True, tty=False).split()
+        server_dn = ''.join(server_dn).strip()
+        # Return oxtrust conf cache refresh
+        oxtrust_conf_cache_refresh = stream(cli.connect_get_namespaced_pod_exec, ldap_pods[0].metadata.name, ldap_pods[0].metadata.namespace,
+                                  command=['/bin/sh', '-c', '/opt/opendj/bin/ldapsearch -h localhost -p 1636 -Z -X -D "cn=directory manager" -w ' + str(
+                bind_password) + ' -b "o=gluu" -T "objectClass=oxTrustConfiguration" oxTrustConfCacheRefresh \ | '
+                                 'grep "^oxTrustConfCacheRefresh"'],
+                                  stderr=True, stdin=True,
+                                  stdout=True, tty=False).split()
+        oxtrust_conf_cache_refresh = ''.join(oxtrust_conf_cache_refresh).strip()
+        # Get the currently set ip in ldap
         # get current ip in ldap
         current_ip_in_ldap = None
-        run = stream(cli.connect_get_namespaced_pod_exec, ldap_pods[0].metadata.name, ldap_pods[0].metadata.namespace,
-               command=['/bin/sh'],
-               stderr=True, stdin=True,
-               stdout=True, tty=False,
-               _preload_content=False)
-        # Return oxtrust server DN
-        server_dn_command = str('/opt/opendj/bin/ldapsearch -h localhost -p 1636 -Z -X -D "cn=directory manager" -w "' +
-                bind_password + '" -b "ou=appliances,o=gluu" "inum=*" | grep dn')
-        oxtrust_conf_cache_refresh_command = str('/opt/opendj/bin/ldapsearch -h localhost -p 1636 -Z -X -D "cn=directory manager" -w "' + str(
-                bind_password) + '" -b "o=gluu" -T "objectClass=oxTrustConfiguration" oxTrustConfCacheRefresh \ | '
-                                 'grep "^oxTrustConfCacheRefresh"')
-        is_cr_enabled_command = str('/opt/opendj/bin/ldapsearch -h localhost -p 1636 -Z -X -D "cn=directory manager" -w ' + str(
+        # From the oxtrust conf cache refresh extract cache refresh conf
+        cache_refresh_conf = oxtrust_conf_cache_refresh[oxtrust_conf_cache_refresh.find("oxTrustConfCacheRefresh:"):].strip()
+        # From the oxtrust conf cache refresh extract oxtrust conf cache refresh DN
+        conf_dn = oxtrust_conf_cache_refresh[oxtrust_conf_cache_refresh.find("dn:"):oxtrust_conf_cache_refresh.find(
+            "oxTrustConfCacheRefresh")].strip()
+        # Returns an index number if -1 disabled and if => 0 enabled
+        is_cr_enabled = stream(cli.connect_get_namespaced_pod_exec, ldap_pods[0].metadata.name, ldap_pods[0].metadata.namespace,
+                                  command=['/bin/sh', '-c', '/opt/opendj/bin/ldapsearch -h localhost -p 1636 -Z -X -D "cn=directory manager" -w ' + str(
                 bind_password) + ' -b "ou=appliances,o=gluu" "gluuVdsCacheRefreshEnabled=*" '
-                                 'gluuVdsCacheRefreshEnabled \ | grep -Pzo "enabled"')
-        commands = [server_dn_command, oxtrust_conf_cache_refresh_command,is_cr_enabled_command]
-        while run.is_open():
-            run.update(timeout=1)
-            read_output_stdout = run.read_stdout()
-            read_output_stderr = run.read_stderr()
-            if read_output_stdout:
-                if len(commands) == 3:
-                    server_dn = read_output_stdout.strip()
-                    print "server dn" + server_dn
-                if len(commands) == 2:
-                    oxtrust_conf_cache_refresh = oxtrust_conf_cache_refresh.strip()
-                    print "oxtrust_conf_cache_refresh: " + oxtrust_conf_cache_refresh
+                                 'gluuVdsCacheRefreshEnabled \ | grep -Pzo "enabled"'],
+                                  stderr=True, stdin=True,
+                                  stdout=True, tty=False).find("enabled")
 
-                if len(commands) == 1:
-                    is_cr_enabled = is_cr_enabled.find("enabled")
-                    print is_cr_enabled
-            if read_output_stderr:
-                    print read_output_stderr
-            if commands:
-                c = commands.pop(0)
-                print("Running command... %s\n" % c)
-                run.write_stdin(c + "\n")
-            else:
-                break
-        run.close()
         # Get the currently set ip in ldap
         # From the oxtrust conf cache refresh extract cache refresh conf
         cache_refresh_conf = oxtrust_conf_cache_refresh[oxtrust_conf_cache_refresh.find("oxTrustConfCacheRefresh: {"):].strip()
@@ -202,31 +189,31 @@ def main():
                 ldif.close()
                 # Clean cache folder at oxtrust container
                 stream(client.connect_get_namespaced_pod_exec, oxtrust_pod.metadata.name, oxtrust_pod.metadata.namespace,
-                       command=['rm', '-rf' '/var/ox/identity/cr-snapshots/'],
+                       command=['/bin/sh','-c','rm -rf /var/ox/identity/cr-snapshots/'],
                        stderr=True, stdin=True,
                        stdout=True, tty=False)
                 stream(client.connect_get_namespaced_pod_exec, oxtrust_pod.metadata.name, oxtrust_pod.metadata.namespace,
-                       command=['mkdir', '/var/ox/identity/cr-snapshots/'],
+                       command=['/bin/sh','-c','mkdir /var/ox/identity/cr-snapshots/'],
                        stderr=True, stdin=True,
                        stdout=True, tty=False)
                 stream(client.connect_get_namespaced_pod_exec, oxtrust_pod.metadata.name, oxtrust_pod.metadata.namespace,
-                       command=['chown', '-R', 'jetty:jetty', '/var/ox/identity/cr-snapshots/'],
+                       command=['/bin/sh','-c','chown -R jetty:jetty /var/ox/identity/cr-snapshots/'],
                        stderr=True, stdin=True,
                        stdout=True, tty=False)
                 stream(client.connect_get_namespaced_pod_exec, ldap_pods[0].metadata.name, ldap_pods[0].metadata.namespace,
-                       command=[' mkdir', '-p', directory],
+                       command=['/bin/sh','-c','mkdir -p' + directory],
                        stderr=True, stdin=True,
                        stdout=True, tty=False)
                 writetoldif_command = [
                     '/bin/sh',
                     '-c',
-                    'echo', ldifdata, '>>', directory+filename]
+                    'echo' + ldifdata + '>>' + directory+filename]
                 stream(api.connect_get_namespaced_pod_exec, ldap_pods[0].metadata.name, ldap_pods[0].metadata.namespace,
                               command=writetoldif_command,
                               stderr=True, stdin=False,
                               stdout=True, tty=False)
                 ldap_modify_status = stream(client.connect_get_namespaced_pod_exec, ldap_pods[0].metadata.name, ldap_pods[0].metadata.namespace,
-                       command=['/opt/opendj/bin/ldapmodify -D "cn=directory manager" -w ' + bind_password +
+                       command=['/bin/sh','-c','/opt/opendj/bin/ldapmodify -D "cn=directory manager" -w ' + bind_password +
                     ' -h localhost -p 1636 --useSSL --trustAll -f ' + directory + filename + directory],
                        stderr=True, stdin=True,
                        stdout=True, tty=False)
@@ -234,7 +221,7 @@ def main():
                 print ldap_modify_status
                 # Clean up files
                 stream(cli.connect_get_namespaced_pod_exec, ldap_pods[0].metadata.name, ldap_pods[0].metadata.namespace,
-                                            command=['rm', '-rf ', directory + filename],
+                                            command=['/bin/sh','-c', 'rm -rf ' + directory + filename],
                                             stderr=True, stdin=True,
                                             stdout=True, tty=False)
                 # ------- Method 2 LDAP -------
