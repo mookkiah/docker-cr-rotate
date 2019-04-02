@@ -139,9 +139,6 @@ def main():
         # Get the currently set ip in ldap
         # From the oxtrust conf cache refresh extract cache refresh conf
         cache_refresh_conf = oxtrust_conf_cache_refresh[oxtrust_conf_cache_refresh.find("oxTrustConfCacheRefresh: {"):].strip()
-        # From the oxtrust conf cache refresh extract oxtrust conf cache refresh DN
-        conf_dn = oxtrust_conf_cache_refresh[oxtrust_conf_cache_refresh.find("dn:"):oxtrust_conf_cache_refresh.find(
-            "oxTrustConfCacheRefresh")].strip()
         # Returns an index number if -1 disabled and if => 0 enabled
         # ------- Method 2 LDAP -------
         # Return oxtrust conf cache refresh
@@ -180,7 +177,7 @@ def main():
                 ldifdata = str(
                     server_dn) + "\nchangetype: modify\nreplace: oxTrustCacheRefreshServerIpAddress\n" \
                                  "oxTrustCacheRefreshServerIpAddress: " + str(
-                    ip) + "\n\n" + str(conf_dn) + "\nchangetype: modify\nreplace: oxTrustConfCacheRefresh\n" + str(
+                    ip) + "\n\n" + str(server_dn) + "\nchangetype: modify\nreplace: oxTrustConfCacheRefresh\n" + str(
                     cache_refresh_conf)
 
                 ldif = open(directory + filename, "w+")
@@ -200,20 +197,20 @@ def main():
                        stderr=True, stdin=True,
                        stdout=True, tty=False)
                 stream(cli.connect_get_namespaced_pod_exec, ldap_pods[0].metadata.name, ldap_pods[0].metadata.namespace,
-                       command=['/bin/sh','-c','mkdir -p' + directory],
+                       command=['/bin/sh','-c','mkdir -p ' + directory],
                        stderr=True, stdin=True,
                        stdout=True, tty=False)
                 writetoldif_command = [
                     '/bin/sh',
                     '-c',
-                    'echo' + ldifdata + '>>' + directory+filename]
+                    'echo ' + ldifdata + ' >> ' + directory + filename]
                 stream(cli.connect_get_namespaced_pod_exec, ldap_pods[0].metadata.name, ldap_pods[0].metadata.namespace,
                               command=writetoldif_command,
                               stderr=True, stdin=False,
                               stdout=True, tty=False)
                 ldap_modify_status = stream(cli.connect_get_namespaced_pod_exec, ldap_pods[0].metadata.name, ldap_pods[0].metadata.namespace,
                        command=['/bin/sh','-c','/opt/opendj/bin/ldapmodify -D "cn=directory manager" -w "' + bind_password +
-                    '" -h localhost -p 1636 --useSSL --trustAll -f ' + directory + filename + directory],
+                    '" -h localhost -p 1636 --useSSL --trustAll -f ' + directory + filename],
                        stderr=True, stdin=True,
                        stdout=True, tty=False)
                 # Currently print but needs to be appended to the oxtrust log file
