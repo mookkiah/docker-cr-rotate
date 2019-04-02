@@ -107,8 +107,8 @@ def main():
     if len(bind_password) > 0:
         # Return oxtrust server DN
         server_dn = stream(cli.connect_get_namespaced_pod_exec, ldap_pods[0].metadata.name, ldap_pods[0].metadata.namespace,
-                                  command=['/bin/sh', '-c', '/opt/opendj/bin/ldapsearch -h localhost -p 1636 -Z -X -D "cn=directory manager" -w ' + str(
-                bind_password) + ' -b "ou=appliances,o=gluu"  "inum=*" | grep dn'],
+                                  command=['/bin/sh', '-c', '/opt/opendj/bin/ldapsearch -h localhost -p 1636 -Z -X -D "cn=directory manager" -w "' + str(
+                bind_password) + '" -b "ou=appliances,o=gluu"  "inum=*" | grep dn'],
                                   stderr=True, stdin=True,
                                   stdout=True, tty=False).split()
         server_dn = ''.join(server_dn).strip()
