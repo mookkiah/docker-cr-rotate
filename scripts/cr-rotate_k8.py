@@ -206,7 +206,7 @@ def main():
                 '\n echo replace: oxTrustCacheRefreshServerIpAddress >> ' + directory + filename +
                                 '\n echo oxTrustCacheRefreshServerIpAddress: ' + str(
                            ip) + ' >> ' + directory + filename + 'echo "\n" >> ' + directory + filename + '\n\n echo ' +
-                                'ou=oxtrust,ou=configuration,' + server_dn[server_dn.find('dn:') + 3:] + ',ou=appliances,o=gluu' + ' >> ' + directory + filename + '\n echo changetype: modify >> ' + directory + filename +
+                                'ou=oxtrust,ou=configuration,' + server_dn[server_dn.find('dn:') + 3:] + ' >> ' + directory + filename + '\n echo changetype: modify >> ' + directory + filename +
                                 '\n echo replace: oxTrustConfCacheRefresh' + ' >> ' + directory + filename +
                                 '\n echo ' + cache_refresh_conf + ' >> ' + directory + filename],
                        stderr=True, stdin=False,
