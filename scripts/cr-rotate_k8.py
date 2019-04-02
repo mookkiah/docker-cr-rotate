@@ -97,9 +97,6 @@ def main():
         # Currently print but needs to be appended to the oxtrust log file
         else:
             print "Bind Password cannot be found"
-        print bind_password
-if __name__ == "__main__":
-            main()
     # if bind pass is empty using the method above try
     # ------- Method 2 using consul ----------
     try:
