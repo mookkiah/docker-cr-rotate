@@ -179,25 +179,25 @@ def main():
                 ldif.close()
                 # Clean cache folder at oxtrust container
                 stream(client.connect_get_namespaced_pod_exec, oxtrust_pod.metadata.name, oxtrust_pod.metadata.namespace,
-                       command=['rm -rf /var/ox/identity/cr-snapshots/'],
+                       command=['rm', '-rf' '/var/ox/identity/cr-snapshots/'],
                        stderr=True, stdin=True,
                        stdout=True, tty=False)
                 stream(client.connect_get_namespaced_pod_exec, oxtrust_pod.metadata.name, oxtrust_pod.metadata.namespace,
-                       command=['mkdir /var/ox/identity/cr-snapshots/'],
+                       command=['mkdir', '/var/ox/identity/cr-snapshots/'],
                        stderr=True, stdin=True,
                        stdout=True, tty=False)
                 stream(client.connect_get_namespaced_pod_exec, oxtrust_pod.metadata.name, oxtrust_pod.metadata.namespace,
-                       command=['chown -R jetty:jetty /var/ox/identity/cr-snapshots/'],
+                       command=['chown', '-R', 'jetty:jetty', '/var/ox/identity/cr-snapshots/'],
                        stderr=True, stdin=True,
                        stdout=True, tty=False)
                 stream(client.connect_get_namespaced_pod_exec, ldap_pods[0].metadata.name, ldap_pods[0].metadata.namespace,
-                       command=[' mkdir -p ' + directory],
+                       command=[' mkdir', '-p', directory],
                        stderr=True, stdin=True,
                        stdout=True, tty=False)
                 writetoldif_command = [
                     '/bin/sh',
                     '-c',
-                    'echo ' + ldifdata + ' >> ' + directory + filename]
+                    'echo', ldifdata, '>>', directory+filename]
                 stream(api.connect_get_namespaced_pod_exec, ldap_pods[0].metadata.name, ldap_pods[0].metadata.namespace,
                               command=writetoldif_command,
                               stderr=True, stdin=False,
@@ -211,7 +211,7 @@ def main():
                 print ldap_modify_status
                 # Clean up files
                 stream(cli.connect_get_namespaced_pod_exec, ldap_pods[0].metadata.name, ldap_pods[0].metadata.namespace,
-                                            command=['rm -rf '],
+                                            command=['rm', '-rf ', directory + filename],
                                             stderr=True, stdin=True,
                                             stdout=True, tty=False)
                 # ------- Method 2 LDAP -------
