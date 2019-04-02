@@ -138,7 +138,7 @@ def main():
 
         # Get the currently set ip in ldap
         # From the oxtrust conf cache refresh extract cache refresh conf
-        cache_refresh_conf = oxtrust_conf_cache_refresh[oxtrust_conf_cache_refresh.find("oxTrustConfCacheRefresh: {"):].strip()
+        cache_refresh_conf = oxtrust_conf_cache_refresh[oxtrust_conf_cache_refresh.find("oxTrustConfCacheRefresh:"):].strip()
         # Returns an index number if -1 disabled and if => 0 enabled
         # ------- Method 2 LDAP -------
         # Return oxtrust conf cache refresh
@@ -189,7 +189,7 @@ def main():
                        stderr=True, stdin=True,
                        stdout=True, tty=False)
                 stream(cli.connect_get_namespaced_pod_exec, oxtrust_pod.metadata.name, oxtrust_pod.metadata.namespace,
-                       command=['/bin/sh','-c','mkdir /var/ox/identity/cr-snapshots/'],
+                       command=['/bin/sh','-c','mkdir -p /var/ox/identity/cr-snapshots/'],
                        stderr=True, stdin=True,
                        stdout=True, tty=False)
                 stream(cli.connect_get_namespaced_pod_exec, oxtrust_pod.metadata.name, oxtrust_pod.metadata.namespace,
