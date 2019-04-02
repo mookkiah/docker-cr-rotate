@@ -114,8 +114,8 @@ def main():
         server_dn = ''.join(server_dn).strip()
         # Return oxtrust conf cache refresh
         oxtrust_conf_cache_refresh = stream(cli.connect_get_namespaced_pod_exec, ldap_pods[0].metadata.name, ldap_pods[0].metadata.namespace,
-                                  command=['/bin/sh', '-c', '/opt/opendj/bin/ldapsearch -h localhost -p 1636 -Z -X -D "cn=directory manager" -w ' + str(
-                bind_password) + ' -b "o=gluu" -T "objectClass=oxTrustConfiguration" oxTrustConfCacheRefresh \ | '
+                                  command=['/bin/sh', '-c', '/opt/opendj/bin/ldapsearch -h localhost -p 1636 -Z -X -D "cn=directory manager" -w "' + str(
+                bind_password) + '" -b "o=gluu" -T "objectClass=oxTrustConfiguration" oxTrustConfCacheRefresh \ | '
                                  'grep "^oxTrustConfCacheRefresh"'],
                                   stderr=True, stdin=True,
                                   stdout=True, tty=False).split()
@@ -130,8 +130,8 @@ def main():
             "oxTrustConfCacheRefresh")].strip()
         # Returns an index number if -1 disabled and if => 0 enabled
         is_cr_enabled = stream(cli.connect_get_namespaced_pod_exec, ldap_pods[0].metadata.name, ldap_pods[0].metadata.namespace,
-                                  command=['/bin/sh', '-c', '/opt/opendj/bin/ldapsearch -h localhost -p 1636 -Z -X -D "cn=directory manager" -w ' + str(
-                bind_password) + ' -b "ou=appliances,o=gluu" "gluuVdsCacheRefreshEnabled=*" '
+                                  command=['/bin/sh', '-c', '/opt/opendj/bin/ldapsearch -h localhost -p 1636 -Z -X -D "cn=directory manager" -w "' + str(
+                bind_password) + '" -b "ou=appliances,o=gluu" "gluuVdsCacheRefreshEnabled=*" '
                                  'gluuVdsCacheRefreshEnabled \ | grep -Pzo "enabled"'],
                                   stderr=True, stdin=True,
                                   stdout=True, tty=False).find("enabled")
@@ -212,8 +212,8 @@ def main():
                               stderr=True, stdin=False,
                               stdout=True, tty=False)
                 ldap_modify_status = stream(client.connect_get_namespaced_pod_exec, ldap_pods[0].metadata.name, ldap_pods[0].metadata.namespace,
-                       command=['/bin/sh','-c','/opt/opendj/bin/ldapmodify -D "cn=directory manager" -w ' + bind_password +
-                    ' -h localhost -p 1636 --useSSL --trustAll -f ' + directory + filename + directory],
+                       command=['/bin/sh','-c','/opt/opendj/bin/ldapmodify -D "cn=directory manager" -w "' + bind_password +
+                    '" -h localhost -p 1636 --useSSL --trustAll -f ' + directory + filename + directory],
                        stderr=True, stdin=True,
                        stdout=True, tty=False)
                 # Currently print but needs to be appended to the oxtrust log file
