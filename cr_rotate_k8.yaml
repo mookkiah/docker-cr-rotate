@@ -1,3 +1,11 @@
+apiVersion: v1
+kind: pod
+metadata:
+  name: cr-rotate
+  labels:
+    APP_NAME: cr-rotate
+
+---
 apiVersion: apps/v1
 kind: Pod
 metadata:
