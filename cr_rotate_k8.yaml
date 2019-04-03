@@ -9,6 +9,7 @@ spec:
   - name: cr-rotate
     image: alpine
     args: [bash]
+    workingDir: "/"
     stdin: true
     tty: true
     env:
@@ -46,8 +47,8 @@ spec:
         value: "1"
     volumeMounts:
     -  name: cr-rotate
-       mountPath: "/.kube"
+       mountPath: "/root/.kube"
   volumes:
   - name: cr-rotate
     hostPath:
-      path: "/.kube"
+      path: "/root/.kube"
