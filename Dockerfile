@@ -42,6 +42,7 @@ ENV GLUU_CONSUL_KEY_FILE /etc/certs/consul_client.key
 ENV GLUU_CONSUL_TOKEN_FILE /etc/certs/consul_token
 ENV GLUU_KUBERNETES_NAMESPACE default
 ENV GLUU_KUBERNETES_CONFIGMAP gluu
+ENV GLUU_LDAP_URL localhost:1636
 
 COPY scripts /opt/cr-rotate/scripts
 RUN chmod +x /opt/cr-rotate/scripts/entrypoint.sh
