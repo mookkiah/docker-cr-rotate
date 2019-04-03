@@ -7,7 +7,7 @@ metadata:
 spec:
   containers:
   - name: cr-rotate
-    image: alpine
+    image: gluufederation/cr-rotate
     args: [bash]
     workingDir: "/"
     stdin: true
