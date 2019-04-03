@@ -1,5 +1,5 @@
 apiVersion: apps/v1
-kind: cr-rotate
+kind: Pod
 metadata:
   name: cr-rotate
   labels:
@@ -15,7 +15,7 @@ spec:
         APP_NAME: cr-rotate
     spec:
       containers:
-      - name: APP_NAME
+      - name: cr-rotate
         image: alpine
         args: bash
         stdin: true
@@ -53,7 +53,7 @@ spec:
             value: "localhost:1636"
           - name: GLUU_MAX_RAM_FRACTION
             value: "1"
-         volumeMounts:
+        volumeMounts:
            - name: cr-rotate
            mountPath: "/.kube"
     volumes:
