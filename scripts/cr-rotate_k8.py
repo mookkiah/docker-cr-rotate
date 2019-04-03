@@ -56,7 +56,7 @@ def main():
         try:
             if "opendj" in pod.metadata.labels['APP_NAME']:
                 ldap_pods.append(pod)
-            elif "oxtrust" in pod.metadata.labels['APP_NAME']:
+            if "oxtrust" in pod.metadata.labels['APP_NAME']:
                 oxtrust_pods.append(pod)
         except ApiException as e:
             if e.status != 404:
@@ -206,7 +206,7 @@ def main():
                 '\n echo replace: oxTrustCacheRefreshServerIpAddress >> ' + directory + filename +
                                 '\n echo oxTrustCacheRefreshServerIpAddress: ' + str(
                            ip) + ' >> ' + directory + filename + 'echo "\n" >> ' + directory + filename + '\n\n echo ' +
-                                'ou=oxtrust,ou=configuration,' + server_dn[server_dn.find('dn:') + 3:] + ' >> ' + directory + filename + '\n echo changetype: modify >> ' + directory + filename +
+                                'dn: ou=oxtrust,ou=configuration,' + server_dn[server_dn.find('dn:') + 3:] + ' >> ' + directory + filename + '\n echo changetype: modify >> ' + directory + filename +
                                 '\n echo replace: oxTrustConfCacheRefresh' + ' >> ' + directory + filename +
                                 '\n echo ' + cache_refresh_conf + ' >> ' + directory + filename],
                        stderr=True, stdin=False,
