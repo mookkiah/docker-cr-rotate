@@ -2,7 +2,7 @@
 
 set -e
 
-if [ "$GLUU_CONTAINER_METADATA" = "" ];then
+if [ "$GLUU_CONTAINER_METADATA" != "docker" ] || [ "$GLUU_CONTAINER_METADATA" != "kubernetes" ];then
 	printf "Setting enviornment choice to default docker.\nIf you are running Kubernetes please change stop and run with GLUU_CONTAINER_METADATA kubernetes "
 	"$GLUU_CONTAINER_METADATA" = "docker"
 fi
