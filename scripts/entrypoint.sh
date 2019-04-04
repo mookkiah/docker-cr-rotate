@@ -3,7 +3,7 @@
 set -e
 
 if [ "$GLUU_CONTAINER_METADATA" = "" ];then
-	printf "Setting enviornment choice to default docker.\nIf you are running Kubernetes please change stop and run with GLUU_CONTAINER_METADATA kubernetes "
+	printf "Setting enviornment choice to default docker.\nIf you are running Kubernetes please change. Stop now and run with GLUU_CONTAINER_METADATA kubernetes "
 	"$GLUU_CONTAINER_METADATA" = "docker"
 fi
 
