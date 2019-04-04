@@ -14,7 +14,7 @@ LICENSE_ACK
 if [ "$GLUU_CONTAINER_METADATA" != "docker" ] && [ "$GLUU_CONTAINER_METADATA" != "kubernetes" ]; then
     echo "Warning: invalid value for GLUU_CONTAINER_METADATA environment variable; fallback to Docker metadata"
     echo ""
-    GLUU_CONTAINER_METADATA=docker
+    GLUU_CONTAINER_METADATA="docker"
 fi
 
 if [ "$GLUU_CONTAINER_METADATA" = "docker" ]; then
