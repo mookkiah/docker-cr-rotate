@@ -2,12 +2,13 @@
 
 set -e
 
-if [ "$GLUU_CONTAINER_METADATA" != "docker" ] && [ "$GLUU_CONTAINER_METADATA" != "kubernetes" ];then
-	printf "Setting enviornment choice to default docker.\n
-	If you are running Kubernetes please stop now and run with GLUU_CONTAINER_METADATA kubernetes "
+if [ "$GLUU_CONTAINER_METADATA" != "docker" ] && [ "$GLUU_CONTAINER_METADATA" != "kubernetes" ]; then
+    echo "Warning: invalid value for GLUU_CONTAINER_METADATA environment variable; fallback to Docker metadata"
+    echo ""
+    GLUU_CONTAINER_METADATA=docker
 fi
 
-if [ "$GLUU_CONTAINER_METADATA" = "docker" ];then
+if [ "$GLUU_CONTAINER_METADATA" = "docker" ]; then
 	if [ -f /etc/redhat-release ]; then
 		source scl_source enable python27 && python /opt/cr-rotate/scripts/cr_rotating_de.py
 	else
@@ -15,7 +16,7 @@ if [ "$GLUU_CONTAINER_METADATA" = "docker" ];then
 	fi
 fi
 
-if [ "$GLUU_CONTAINER_METADATA" = "kubernetes" ];then
+if [ "$GLUU_CONTAINER_METADATA" = "kubernetes" ]; then
 	if [ -f /etc/redhat-release ]; then
 		source scl_source enable python27 && python /opt/cr-rotate/scripts/cr_rotating_k8.py
 	else
