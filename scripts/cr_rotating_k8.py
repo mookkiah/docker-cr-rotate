@@ -147,20 +147,25 @@ def main():
         # ------- Method 2 LDAP -------
         # Return oxtrust conf cache refresh
         conn_ldap.search('o=gluu', '(objectclass=oxTrustConfiguration)', attributes='oxTrustConfCacheRefresh')
-        oxtrust_conf_cache_refresh_LDAP = str(conn.entries[0]).strip()
+        oxtrust_conf_cache_refresh_LDAP = str(conn_ldap.entries[0]).strip()
         cache_refresh_conf_ldap = oxtrust_conf_cache_refresh_LDAP[
-                             oxtrust_conf_cache_refresh_LDAP.find("oxTrustConfCacheRefresh: {"):].strip("\n")
-        conn.search_ldap('ou=appliances,o=gluu', '(objectclass=gluuAppliance)', attributes='inum')
-        server_dn_LDAP = str(conn.entries[0]).strip()
+                                  oxtrust_conf_cache_refresh_LDAP.find("oxTrustConfCacheRefresh: "):].strip("\n")
+        conn_ldap.search('ou=appliances,o=gluu', '(objectclass=gluuAppliance)', attributes='inum')
+        server_dn_LDAP = str(conn_ldap.entries[0]).strip()
         server_dn_ldap = server_dn_LDAP[server_dn_LDAP.find("inum: "):].strip("\n")
-        server_dn_ldap = "inum=" + server_dn[server_dn.find("m:") + 3:]
-        # Change this and add search for oxTrustCacheRefreshServerIpAddress
-        current_ip_in_ldap_ldap = current_ip_in_ldap_LDAP[current_ip_in_ldap_LDAP.find("gluuIpAddress: "):].strip("\n")
-        conn_ldap.search('ou=appliances,o=gluu', '(objectclass=gluuAppliance)', attributes=['gluuVdsCacheRefreshEnabled'])
-        is_cr_enabled_ldap_LDAP = str(conn.entries[0]).strip()
-        is_cr_enabled_ldap = is_cr_enabled_ldap_LDAP[is_cr_enabled_ldap_LDAP.find("gluuVdsCacheRefreshEnabled: "):].strip(
-            "\n")
-        conn_ldap.search('o=gluu', '(objectclass=gluuOrganization)', attributes=['o'])
+        server_dn_ldap = "inum=" + server_dn_ldap[server_dn_ldap.find("m:") + 3:]
+        conn_ldap.search('ou=appliances,o=gluu', '(objectclass=gluuAppliance)',
+                         attributes='oxTrustCacheRefreshServerIpAddress')
+        current_ip_in_ldap_LDAP = str(conn_ldap.entries[0]).strip()
+        current_ip_in_ldap_ldap = current_ip_in_ldap_LDAP[
+                                  current_ip_in_ldap_LDAP.find("oxTrustCacheRefreshServerIpAddress: ") + len(
+                                      "oxTrustCacheRefreshServerIpAddress: "):].strip("\n")
+        conn_ldap.search('ou=appliances,o=gluu', '(objectclass=gluuAppliance)',
+                         attributes=['gluuVdsCacheRefreshEnabled'])
+        is_cr_enabled_ldap_LDAP = str(conn_ldap.entries[0]).strip()
+        is_cr_enabled_ldap = is_cr_enabled_ldap_LDAP[
+                             is_cr_enabled_ldap_LDAP.find("gluuVdsCacheRefreshEnabled: "):].strip(
+            "\n").find("enabled")
         # ------- END_Method 2 LDAP -------
         for oxtrust_pod in oxtrust_pods:
             ip = oxtrust_pod.status.pod_ip
@@ -231,8 +236,8 @@ def main():
                 conn.modify(server_dn + ',ou=appliances,o=gluu',
                             {'oxTrustCacheRefreshServerIpAddress': [(MODIFY_REPLACE, [ip])]})
                 print "OxtrustCacheRefreshServerIpAddress was modified : output to oxtrust.log"
-                print conn.result
-                conn.modify('ou=oxtrust,ou=configuration,' + server_dn + ',ou=appliances,o=gluu',
+                print conn_ldap.result
+                conn_ldap.modify('ou=oxtrust,ou=configuration,' + server_dn + ',ou=appliances,o=gluu',
                             {'oxTrustConfCacheRefresh': [(MODIFY_REPLACE, [cache_refresh_conf])]})
                 print "oxTrustConfCacheRefresh was modified : output to oxtrust.log"
                 # ------- END_Method 2 LDAP -------
