@@ -19,7 +19,7 @@ from kubernetes.client.apis import core_v1_api
 from kubernetes.client.rest import ApiException
 from kubernetes.stream import stream
 from ldap3 import Server, Connection, MODIFY_REPLACE, MODIFY_ADD, MODIFY_DELETE, SUBTREE, ALL, BASE, LEVEL
-from gluulib import get_manager
+from gluu_config import ConfigManager
 # Function to decrypt encoded password
 def decrypt_text(encrypted_text, key):
     cipher = pyDes.triple_des(b"{}".format(key), pyDes.ECB,
@@ -49,7 +49,6 @@ def main():
     salt_code = ''
     bind_password = ''
     #-------Method 2 LDAP ------------
-    manager = get_manager()
     GLUU_LDAP_URL = os.environ.get("GLUU_LDAP_URL", "localhost:1636")
     # -------END_Method 2 LDAP ------------
     for pod in pods:
@@ -96,8 +95,8 @@ def main():
     # if bind pass is empty using the method above try
     # ------- Method 2 using consul ----------
     try:
-        bind_dn_ldap = manager.config.get("ldap_binddn")
-        bind_password_ldap = decrypt_text(manager.secret.get("encoded_ox_ldap_pw"),manager.secret.get("encoded_salt"))
+        bind_dn_ldap = config_manager.get("ldap_binddn")
+        bind_password_ldap = decrypt_text(config_manager.get("encoded_ox_ldap_pw"), config_manager.get("encoded_salt"))
         ldap_server_ldap = Server(GLUU_LDAP_URL, port=1636, use_ssl=True)
         conn_ldap = Connection(ldap_server, bind_dn, bind_password)
         conn_ldap.bind()
@@ -121,7 +120,7 @@ def main():
                                   stdout=True, tty=False).split()
         oxtrust_conf_cache_refresh = ''.join(oxtrust_conf_cache_refresh).strip()
         # Get the currently set ip in ldap
-        # get current ip in ldap
+        # get current ip in ldap oxTrustCacheRefreshServerIpAddress
         current_ip_in_ldap = None
         # From the oxtrust conf cache refresh extract cache refresh conf
         cache_refresh_conf = oxtrust_conf_cache_refresh[oxtrust_conf_cache_refresh.find("oxTrustConfCacheRefresh:"):].strip()
@@ -136,7 +135,6 @@ def main():
                                   stderr=True, stdin=True,
                                   stdout=True, tty=False).find("enabled")
 
-        # Get the currently set ip in ldap
         # From the oxtrust conf cache refresh extract cache refresh conf
         cache_refresh_conf = oxtrust_conf_cache_refresh[oxtrust_conf_cache_refresh.find("oxTrustConfCacheRefresh:"):].strip()
         # Returns an index number if -1 disabled and if => 0 enabled
@@ -150,7 +148,7 @@ def main():
         server_dn_LDAP = str(conn.entries[0]).strip()
         server_dn_ldap = server_dn_LDAP[server_dn_LDAP.find("inum: "):].strip("\n")
         server_dn_ldap = "inum=" + server_dn[server_dn.find("m:") + 3:]
-        # Change this
+        # Change this and add search for oxTrustCacheRefreshServerIpAddress
         current_ip_in_ldap_ldap = current_ip_in_ldap_LDAP[current_ip_in_ldap_LDAP.find("gluuIpAddress: "):].strip("\n")
         conn_ldap.search('ou=appliances,o=gluu', '(objectclass=gluuAppliance)', attributes=['gluuVdsCacheRefreshEnabled'])
         is_cr_enabled_ldap_LDAP = str(conn.entries[0]).strip()
@@ -160,14 +158,13 @@ def main():
         # ------- END_Method 2 LDAP -------
         for oxtrust_pod in oxtrust_pods:
             ip = oxtrust_pod.status.pod_ip
-            print ip
             if is_cr_enabled < 0:
                 # The user has disabled the CR
                 # Check if the path for the LDIF exists and if so remove it
                 if os.path.isdir(directory):
                     shutil.rmtree(directory)
             # Check  the container has not been setup previosly, the CR is enabled
-            elif ip != current_ip_in_ldap and is_cr_enabled >= 0:
+            if ip != current_ip_in_ldap and is_cr_enabled >= 0:
                 if not os.path.isdir(directory):
                     os.makedirs(directory)
 

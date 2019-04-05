@@ -51,7 +51,6 @@ def main():
     salt_code = ''
     bind_password = ''
     #-------Method 2 LDAP ------------
-    manager = get_manager()
     GLUU_LDAP_URL = os.environ.get("GLUU_LDAP_URL", "localhost:1636")
     # -------END_Method 2 LDAP ------------
     for container in client.containers.list():
@@ -92,7 +91,7 @@ def main():
     # if bind pass is empty using the method above try
     # ------- Method 2 using consul ----------
     try:
-        bind_dn_ldap = manager.config.get("ldap_binddn")
+        bind_dn_ldap = config_manager.get("ldap_binddn")
         bind_password_ldap = decrypt_text(config_manager.get("encoded_ox_ldap_pw"), config_manager.get("encoded_salt"))
         ldap_server_ldap = Server(GLUU_LDAP_URL, port=1636, use_ssl=True)
         conn_ldap = Connection(ldap_server, bind_dn, bind_password)
@@ -110,7 +109,7 @@ def main():
             '/opt/opendj/bin/ldapsearch -h localhost -p 1636 -Z -X -D "cn=directory manager" -w ' + str(
                 bind_password) + ' -b "o=gluu" -T "objectClass=oxTrustConfiguration" oxTrustConfCacheRefresh \ | '
                                  'grep "^oxTrustConfCacheRefresh"').output.strip()
-        # Get the currently set ip in ldap
+        # Get the currently set ip in ldap oxTrustCacheRefreshServerIpAddress
         current_ip_in_ldap = ldap_containers[0].exec_run(
             '/opt/opendj/bin/ldapsearch -h localhost -p 1636 -Z -X -D "cn=directory manager" -w ' + str(
                 bind_password) + ' -b "ou=appliances,o=gluu"  "gluuIpAddress=*" gluuIpAddress \ | '
