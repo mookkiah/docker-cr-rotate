@@ -119,9 +119,15 @@ def main():
                                   stderr=True, stdin=True,
                                   stdout=True, tty=False).split()
         oxtrust_conf_cache_refresh = ''.join(oxtrust_conf_cache_refresh).strip()
-        # Get the currently set ip in ldap
         # get current ip in ldap oxTrustCacheRefreshServerIpAddress
-        current_ip_in_ldap = None
+        current_ip_in_ldap = stream(cli.connect_get_namespaced_pod_exec, ldap_pods[0].metadata.name,
+                                            ldap_pods[0].metadata.namespace,
+                                            command=['/bin/sh', '-c',
+                                                     '/opt/opendj/bin/ldapsearch -h localhost -p 1636 -Z -X -D "cn=directory manager" -w ' + str(
+                bind_password) + ' -b "ou=appliances,o=gluu"  "inum=*" | grep "^oxTrustCacheRefreshServerIpAddress"'],
+                                            stderr=True, stdin=True,
+                                            stdout=True, tty=False).split()
+        current_ip_in_ldap = ''.join(current_ip_in_ldap).strip()
         # From the oxtrust conf cache refresh extract cache refresh conf
         cache_refresh_conf = oxtrust_conf_cache_refresh[oxtrust_conf_cache_refresh.find("oxTrustConfCacheRefresh:"):].strip()
         # From the oxtrust conf cache refresh extract oxtrust conf cache refresh DN

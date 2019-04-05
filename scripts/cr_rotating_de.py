@@ -103,17 +103,16 @@ def main():
         # Return oxtrust server DN
         server_dn = ldap_containers[0].exec_run(
             '/opt/opendj/bin/ldapsearch -h localhost -p 1636 -Z -X -D "cn=directory manager" -w ' + str(
-                bind_password) + ' -b "ou=appliances,o=gluu"  "inum=*" | grep dn)').output.strip()
+                bind_password) + ' -b "ou=appliances,o=gluu"  "inum=*" | grep dn').output.strip()
         # Return oxtrust conf cache refresh
         oxtrust_conf_cache_refresh = ldap_containers[0].exec_run(
             '/opt/opendj/bin/ldapsearch -h localhost -p 1636 -Z -X -D "cn=directory manager" -w ' + str(
-                bind_password) + ' -b "o=gluu" -T "objectClass=oxTrustConfiguration" oxTrustConfCacheRefresh \ | '
-                                 'grep "^oxTrustConfCacheRefresh"').output.strip()
+                bind_password) + ' -b "o=gluu" -T "objectClass=oxTrustConfiguration" oxTrustCacheRefreshServerIpAddress \ | '
+                                 'grep "^oxTrustCacheRefreshServerIpAddress"').output.strip()
         # Get the currently set ip in ldap oxTrustCacheRefreshServerIpAddress
         current_ip_in_ldap = ldap_containers[0].exec_run(
             '/opt/opendj/bin/ldapsearch -h localhost -p 1636 -Z -X -D "cn=directory manager" -w ' + str(
-                bind_password) + ' -b "ou=appliances,o=gluu"  "gluuIpAddress=*" gluuIpAddress \ | '
-                                 'grep -E -o "([0-9]{1,3}[\.]){3}[0-9]{1,3}"').output.strip()
+                bind_password) + ' -b "ou=appliances,o=gluu"  "inum=*" | grep "^oxTrustCacheRefreshServerIpAddress"').output.strip()
         # From the oxtrust conf cache refresh extract cache refresh conf
         cache_refresh_conf = oxtrust_conf_cache_refresh[oxtrust_conf_cache_refresh.find("oxTrustConfCacheRefresh: {"):].strip()
         # From the oxtrust conf cache refresh extract oxtrust conf cache refresh DN
@@ -136,14 +135,16 @@ def main():
             server_dn_LDAP = str(conn.entries[0]).strip()
             server_dn_ldap = server_dn_LDAP[server_dn_LDAP.find("inum: "):].strip("\n")
             server_dn_ldap = "inum=" + server_dn[server_dn.find("m:") + 3:]
-            conn_ldap.search('ou=appliances,o=gluu', '(objectclass=gluuAppliance)', attributes=['gluuIpAddress'])
+            conn.search_ldap('ou=appliances,o=gluu', '(objectclass=gluuAppliance)', attributes='inum')
             current_ip_in_ldap_LDAP = str(conn.entries[0]).strip()
-            current_ip_in_ldap_ldap = current_ip_in_ldap_LDAP[current_ip_in_ldap_LDAP.find("gluuIpAddress: "):].strip("\n")
+            current_ip_in_ldap_ldap = current_ip_in_ldap_LDAP[current_ip_in_ldap_LDAP.find("oxTrustCacheRefreshServerIpAddress: "):].strip("\n")
             conn_ldap.search('ou=appliances,o=gluu', '(objectclass=gluuAppliance)', attributes=['gluuVdsCacheRefreshEnabled'])
             is_cr_enabled_ldap_LDAP = str(conn.entries[0]).strip()
             is_cr_enabled_ldap = is_cr_enabled_ldap_LDAP[is_cr_enabled_ldap_LDAP.find("gluuVdsCacheRefreshEnabled: "):].strip(
                 "\n")
             conn_ldap.search('o=gluu', '(objectclass=gluuOrganization)', attributes=['o'])
+
+
         except Exception as err:
             print err
         # ------- END_Method 2 LDAP -------
