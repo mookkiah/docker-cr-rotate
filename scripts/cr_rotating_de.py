@@ -12,7 +12,7 @@ import pyDes
 import tarfile
 import shutil
 from ldap3 import Server, Connection, MODIFY_REPLACE, MODIFY_ADD, MODIFY_DELETE, SUBTREE, ALL, BASE, LEVEL
-from gluulib import get_manager
+from gluu_config import ConfigManager
 # Function to copy files from source to destination
 def copy_to(src, container, dst):
     os.chdir(os.path.dirname(src))
@@ -93,7 +93,7 @@ def main():
     # ------- Method 2 using consul ----------
     try:
         bind_dn_ldap = manager.config.get("ldap_binddn")
-        bind_password_ldap = decrypt_text(manager.secret.get("encoded_ox_ldap_pw"),manager.secret.get("encoded_salt"))
+        bind_password_ldap = decrypt_text(config_manager.get("encoded_ox_ldap_pw"), config_manager.get("encoded_salt"))
         ldap_server_ldap = Server(GLUU_LDAP_URL, port=1636, use_ssl=True)
         conn_ldap = Connection(ldap_server, bind_dn, bind_password)
         conn_ldap.bind()
