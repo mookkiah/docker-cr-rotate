@@ -48,6 +48,7 @@ def main():
     bind_password_encoded = ''
     salt_code = ''
     bind_password = ''
+    oxtrust_ip_pool = []
     #-------Method 2 LDAP ------------
     GLUU_LDAP_URL = os.environ.get("GLUU_LDAP_URL", "localhost:1636")
     # -------END_Method 2 LDAP ------------
@@ -65,6 +66,8 @@ def main():
 
     # Get encoded password
     for oxtrust_pod in oxtrust_pods:
+        ip = oxtrust_pod.status.pod_ip
+        oxtrust_ip_pool.append(ip)
         # Return the ox-ldap.properties file as a list
         oxldap_prop_list = None
         oxldap_prop_list = stream(cli.connect_get_namespaced_pod_exec, oxtrust_pod.metadata.name, oxtrust_pod.metadata.namespace,
@@ -77,6 +80,7 @@ def main():
                                   command=['cat', '/etc/gluu/conf/salt'],
                                   stderr=True, stdin=True,
                                   stdout=True, tty=False).split()
+
         # Check if there exists a salt code in the salt list, if so set salt_code to it
         if ''.join(salt_list).find('=') >= 0:
             salt_code = salt_list[salt_list.index('=') + 1]
@@ -128,6 +132,9 @@ def main():
                                             stderr=True, stdin=True,
                                             stdout=True, tty=False).split()
         current_ip_in_ldap = ''.join(current_ip_in_ldap).strip()
+        current_ip_in_ldap = current_ip_in_ldap[
+                             current_ip_in_ldap.find("oxTrustCacheRefreshServerIpAddress: ") + len(
+                                 "oxTrustCacheRefreshServerIpAddress: "):].strip("\n")
         # From the oxtrust conf cache refresh extract cache refresh conf
         cache_refresh_conf = oxtrust_conf_cache_refresh[oxtrust_conf_cache_refresh.find("oxTrustConfCacheRefresh:"):].strip()
         # From the oxtrust conf cache refresh extract oxtrust conf cache refresh DN
@@ -167,6 +174,7 @@ def main():
                              is_cr_enabled_ldap_LDAP.find("gluuVdsCacheRefreshEnabled: "):].strip(
             "\n").find("enabled")
         # ------- END_Method 2 LDAP -------
+        #check that one of the oxtrust is already configured with CR
         for oxtrust_pod in oxtrust_pods:
             ip = oxtrust_pod.status.pod_ip
             if is_cr_enabled < 0:
@@ -175,7 +183,7 @@ def main():
                 if os.path.isdir(directory):
                     shutil.rmtree(directory)
             # Check  the container has not been setup previosly, the CR is enabled
-            if ip != current_ip_in_ldap and is_cr_enabled >= 0:
+            if ip != current_ip_in_ldap and is_cr_enabled >= 0 and current_ip_in_ldap not in oxtrust_ip_pool:
                 if not os.path.isdir(directory):
                     os.makedirs(directory)
 

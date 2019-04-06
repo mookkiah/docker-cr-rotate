@@ -47,6 +47,7 @@ def main():
     oxtrust_containers = []
     # Empty list to hold LDAP containers . Usually and almost always will only have one
     ldap_containers = []
+    oxtrust_ip_pool = []
     bind_password_encoded = ''
     salt_code = ''
     bind_password = ''
@@ -68,6 +69,14 @@ def main():
     if len(ldap_containers) == 0: print "No LDAP found"
     # Get encoded password
     for oxtrust_container in oxtrust_containers:
+        ### append the IPs of all oxtrust
+        network_dict = low_client.inspect_container(oxtrust_container.id)['NetworkSettings']['Networks']
+        first_default_network_name = str(network_dict.keys()[0])
+        ip = low_client.inspect_container(oxtrust_container.id)['NetworkSettings']['Networks'][first_default_network_name][
+            'IPAddress'].strip()
+        oxtrust_ip_pool.append(ip)
+        ###
+
         # Return the ox-ldap.properties file as a list
         oxldap_prop_list = oxtrust_container.exec_run('cat /etc/gluu/conf/ox-ldap.properties').output.split()
         # Return the salt file as a list
@@ -113,6 +122,9 @@ def main():
         current_ip_in_ldap = ldap_containers[0].exec_run(
             '/opt/opendj/bin/ldapsearch -h localhost -p 1636 -Z -X -D "cn=directory manager" -w ' + str(
                 bind_password) + ' -b "ou=appliances,o=gluu"  "inum=*" | grep "^oxTrustCacheRefreshServerIpAddress"').output.strip()
+        current_ip_in_ldap = current_ip_in_ldap[
+                                  current_ip_in_ldap.find("oxTrustCacheRefreshServerIpAddress: ") + len(
+                                      "oxTrustCacheRefreshServerIpAddress: "):].strip("\n")
         # From the oxtrust conf cache refresh extract cache refresh conf
         cache_refresh_conf = oxtrust_conf_cache_refresh[oxtrust_conf_cache_refresh.find("oxTrustConfCacheRefresh: {"):].strip()
         # From the oxtrust conf cache refresh extract oxtrust conf cache refresh DN
@@ -162,7 +174,7 @@ def main():
                     except Exception as err:
                         print err
             # Check  the container has not been setup previosly, the CR is enabled
-            if ip != current_ip_in_ldap and is_cr_enabled >= 0:
+            if ip != current_ip_in_ldap and is_cr_enabled >= 0 and current_ip_in_ldap not in oxtrust_ip_pool:
                 if not os.path.isdir(directory):
                     try:
                         os.makedirs(directory)
