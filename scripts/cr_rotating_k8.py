@@ -20,8 +20,8 @@ from gluu_config import ConfigManager
 import datetime
 
 
+# Function to decrypt encoded password
 def decrypt_text(encrypted_text, key):
-    # Function to decrypt encoded password
     cipher = pyDes.triple_des(b"{}".format(key), pyDes.ECB,
                               padmode=pyDes.PAD_PKCS5)
     encrypted_text = b"{}".format(base64.b64decode(encrypted_text))
