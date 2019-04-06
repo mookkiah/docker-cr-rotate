@@ -2,40 +2,46 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: cr-rotate
+  namespace: default
   labels:
     APP_NAME: cr-rotate
 spec:
   containers:
   - name: cr-rotate
-    image: gluufederation/cr-rotate
-    args: [bash]
+    image: alpine:3.2
+    command:
+      - /bin/sh
+      - "-c"
+      - "sleep 60m"
+    imagePullPolicy: IfNotPresent
+    name: alpine
     workingDir: "/"
     stdin: true
     tty: true
     env:
-      - name: GLUU_CONFIG_ADAPTER 
+      - name: GLUU_CONFIG_ADAPTER
         value: "consul"
-      - name: GLUU_CONSUL_HOST 
+      - name: GLUU_CONSUL_HOST
         value: "localhost"
-      - name: GLUU_CONSUL_PORT 
+      - name: GLUU_CONSUL_PORT
         value: "8500"
-      - name: GLUU_CONSUL_CONSISTENCY 
+      - name: GLUU_CONSUL_CONSISTENCY
         value: "stale"
-      - name: GLUU_CONSUL_SCHEME 
+      - name: GLUU_CONSUL_SCHEME
         value: "http"
-      - name: GLUU_CONSUL_VERIFY 
+      - name: GLUU_CONSUL_VERIFY
         value: "false"
-      - name: GLUU_CONSUL_CACERT_FILE 
+      - name: GLUU_CONSUL_CACERT_FILE
         value: "/etc/certs/consul_ca.crt"
-      - name: GLUU_CONSUL_CERT_FILE 
+      - name: GLUU_CONSUL_CERT_FILE
         value: "/etc/certs/consul_client.crt"
-      - name: GLUU_CONSUL_KEY_FILE 
+      - name: GLUU_CONSUL_KEY_FILE
         value: "/etc/certs/consul_client.key"
-      - name: GLUU_CONSUL_TOKEN_FILE 
+      - name: GLUU_CONSUL_TOKEN_FILE
         value: "/etc/certs/consul_token"
-      - name: GLUU_KUBERNETES_NAMESPACE 
+      - name: GLUU_KUBERNETES_NAMESPACE
         value: "default"
-      - name: GLUU_KUBERNETES_CONFIGMAP 
+      - name: GLUU_KUBERNETES_CONFIGMAP
         value: "gluu"
       - name: GLUU_CONFIG_ADAPTER
         value: "kubernetes"
@@ -46,8 +52,8 @@ spec:
       - name: GLUU_MAX_RAM_FRACTION
         value: "1"
     volumeMounts:
-    -  name: cr-rotate
-       mountPath: "/root/.kube"
+    - name: cr-rotate
+      mountPath: "/root/.kube"
   volumes:
   - name: cr-rotate
     hostPath:
