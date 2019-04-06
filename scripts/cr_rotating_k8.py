@@ -57,6 +57,14 @@ def main():
     GLUU_LDAP_URL = os.environ.get("GLUU_LDAP_URL", "localhost:1636")
     # -------END_Method 2 LDAP ------------
     # Open cache refresh log file
+    if not os.path.isdir('/cr/logs'):
+        try:
+            os.makedirs('/cr/logs')
+            cr_rotating_log.write('[' + str(datetime.datetime.now()) + '] : ' +
+                                  str('Creating directory : /cr/logs/') + '\n')
+        except Exception as e:
+            cr_rotating_log.write('[' + str(datetime.datetime.now()) + '] : ' + str(e) + '\n')
+
     cr_rotating_log = open("/cr/logs/cr_rotating.log", "a+")
     # Get Oxtrust and OpenDJ pods associated with APP_NAME label
     for pod in pods:

@@ -43,7 +43,6 @@ def main():
     directory = "/cr/ldif"
     # Filename of Cache Refresh LDIF
     filename = "/crldif"
-    cr_rotating_log = open("/cr/logs/cr_rotating.log", "a+")
     # Docker URL
     docker_url = 'unix://var/run/docker.sock'
     # Docker Client
@@ -60,6 +59,14 @@ def main():
     salt_code = ''
     bind_password = ''
     Label = ''
+    if not os.path.isdir('/cr/logs'):
+        try:
+            os.makedirs('/cr/logs')
+            cr_rotating_log.write('[' + str(datetime.datetime.now()) + '] : ' +
+                                  str('Creating directory : /cr/logs/') + '\n')
+        except Exception as e:
+            cr_rotating_log.write('[' + str(datetime.datetime.now()) + '] : ' + str(e) + '\n')
+    cr_rotating_log = open("/cr/logs/cr_rotating.log", "a+")
     #-------Method 2 LDAP ------------
     # Get URL of LDAP
     GLUU_LDAP_URL = os.environ.get("GLUU_LDAP_URL", "localhost:1636")
