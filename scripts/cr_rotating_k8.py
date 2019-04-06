@@ -29,6 +29,7 @@ def decrypt_text(encrypted_text, key):
 
 
 def main():
+    config_manager = ConfigManager()
     # Load Kubernetes Configuration
     config.load_kube_config()
     c = Configuration()

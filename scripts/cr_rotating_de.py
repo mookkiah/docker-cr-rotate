@@ -38,6 +38,7 @@ def decrypt_text(encrypted_text, key):
 
 
 def main():
+    config_manager = ConfigManager()
     # Directory of Cache Refresh LDIF
     directory = "/cr/ldif"
     # Filename of Cache Refresh LDIF
