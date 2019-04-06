@@ -22,7 +22,7 @@ case $GLUU_CONTAINER_METADATA in
         ENTRYPOINT="/opt/cr-rotate/scripts/cr_rotating_de.py"
         ;;
     "kubernetes")
-        ENTRYPOINT="/opt/cr-rotate/scripts/cr_rotate_k8.py"
+        ENTRYPOINT="/opt/cr-rotate/scripts/cr_rotating_k8.py"
         ;;
 esac
 
