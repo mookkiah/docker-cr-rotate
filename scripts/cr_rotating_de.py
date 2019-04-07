@@ -38,6 +38,15 @@ def decrypt_text(encrypted_text, key):
 
 
 def main():
+    error = None
+    if not os.path.isdir('/cr/logs'):
+        try:
+            os.makedirs('/cr/logs')
+        except Exception as e:
+            error = e
+    cr_rotating_log = open("/cr/logs/cr_rotating.log", "a+")
+    cr_rotating_log.write('[' + str(datetime.datetime.now()) + '] : ' +
+                          str('Creating directory : /cr/logs/') + str(error) + '\n')
     config_manager = ConfigManager()
     # Directory of Cache Refresh LDIF
     directory = "/cr/ldif"
@@ -59,14 +68,6 @@ def main():
     salt_code = ''
     bind_password = ''
     Label = ''
-    if not os.path.isdir('/cr/logs'):
-        try:
-            os.makedirs('/cr/logs')
-            cr_rotating_log.write('[' + str(datetime.datetime.now()) + '] : ' +
-                                  str('Creating directory : /cr/logs/') + '\n')
-        except Exception as e:
-            cr_rotating_log.write('[' + str(datetime.datetime.now()) + '] : ' + str(e) + '\n')
-    cr_rotating_log = open("/cr/logs/cr_rotating.log", "a+")
     #-------Method 2 LDAP ------------
     # Get URL of LDAP
     GLUU_LDAP_URL = os.environ.get("GLUU_LDAP_URL", "localhost:1636")

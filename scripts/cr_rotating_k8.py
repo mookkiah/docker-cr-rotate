@@ -28,15 +28,40 @@ def decrypt_text(encrypted_text, key):
     return cipher.decrypt(encrypted_text)
 
 
+def get_kube():
+    cli = None
+    # XXX: is there a better way to check if we are inside a cluster or not?
+    if "KUBERNETES_SERVICE_HOST" in os.environ:
+        config.load_incluster_config()
+        cli = client.CoreV1Api()
+    else:
+        try:
+            # Load Kubernetes Configuration
+            config.load_kube_config()
+            c = Configuration()
+            c.assert_hostname = False
+            Configuration.set_default(c)
+            # Set Kubernetes Client
+            cli = core_v1_api.CoreV1Api()
+        except FileNotFoundError:
+            cr_rotating_log.write('[' + str(datetime.datetime.now()) + '] : ' +
+                                  str('Creating directory : /cr/logs/') + '\n')
+
+    return cli
+
+
 def main():
+    error = None
+    if not os.path.isdir('/cr/logs'):
+        try:
+            os.makedirs('/cr/logs')
+        except Exception as e:
+            error = e
+    cr_rotating_log = open("/cr/logs/cr_rotating.log", "a+")
+    cr_rotating_log.write('[' + str(datetime.datetime.now()) + '] : ' +
+                          str('Creating directory : /cr/logs/') + str(error) + '\n')
     config_manager = ConfigManager()
-    # Load Kubernetes Configuration
-    config.load_kube_config()
-    c = Configuration()
-    c.assert_hostname = False
-    Configuration.set_default(c)
-    # Set Kubernetes Client
-    cli = core_v1_api.CoreV1Api()
+    cli = get_kube()
     # Get a list of all available pods
     pods = cli.list_pod_for_all_namespaces().items
     # Directory of Cache Refresh LDIF
@@ -57,15 +82,6 @@ def main():
     GLUU_LDAP_URL = os.environ.get("GLUU_LDAP_URL", "localhost:1636")
     # -------END_Method 2 LDAP ------------
     # Open cache refresh log file
-    if not os.path.isdir('/cr/logs'):
-        try:
-            os.makedirs('/cr/logs')
-            cr_rotating_log.write('[' + str(datetime.datetime.now()) + '] : ' +
-                                  str('Creating directory : /cr/logs/') + '\n')
-        except Exception as e:
-            cr_rotating_log.write('[' + str(datetime.datetime.now()) + '] : ' + str(e) + '\n')
-
-    cr_rotating_log = open("/cr/logs/cr_rotating.log", "a+")
     # Get Oxtrust and OpenDJ pods associated with APP_NAME label
     for pod in pods:
         try:
