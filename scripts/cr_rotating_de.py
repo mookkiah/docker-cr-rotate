@@ -56,12 +56,10 @@ def main():
     docker_url = 'unix://var/run/docker.sock'
     # Docker Client
     client = docker.DockerClient(base_url=docker_url)
-    # Low level API client
-    low_client = docker.APIClient(base_url=docker_url)
     # Empty list to hold oxtrust containers
-    oxtrust_containers = []
+    oxtrust_containers = client.containers.list(filters={'label': 'APP_NAME=oxtrust'})
     # Empty list to hold LDAP containers . Usually and almost always will only have one
-    ldap_containers = []
+    ldap_containers = client.containers.list(filters={'label': 'APP_NAME=opendj'})
     # Empty list to hold oxtrust containers IPs
     oxtrust_ip_pool = []
     bind_password_encoded = ''
@@ -73,24 +71,14 @@ def main():
     GLUU_LDAP_URL = os.environ.get("GLUU_LDAP_URL", "localhost:1636")
     # -------END_Method 2 LDAP ------------
     # Get Oxtrust and OpenDJ containers associated with APP_NAME label
-    for container in client.containers.list():
-        try:
-            Label = low_client.inspect_container(container.id)['Config']['Labels']['APP_NAME']
-        except Exception as e:
-            cr_rotating_log.write('[' + str(datetime.datetime.now()) + '] : ' + str(e) + '\n')
-        if len(Label) > 0:
-            if "oxtrust" in Label:
-                oxtrust_containers.append(container)
-                # Get IP of conatiner and send it to IP pool lost
-                network_dict = low_client.inspect_container(container.id)['NetworkSettings']['Networks']
-                first_default_network_name = str(network_dict.keys()[0])
-                ip = low_client.inspect_container(container.id)['NetworkSettings']['Networks'][
-                    first_default_network_name]['IPAddress'].strip()
-                oxtrust_ip_pool.append(ip)
-            elif "opendj" in Label:
-                ldap_containers.append(container)
+    for container in oxtrust_containers:
+            # Get IP of conatiner and send it to IP pool lost
+            network_dict = container.attrs['NetworkSettings']['Networks']
+            first_default_network_name = str(network_dict.keys()[0])
+            ip = container.attrs['NetworkSettings']['Networks'][first_default_network_name]['IPAddress'].strip()
+            oxtrust_ip_pool.append(ip)
     # No LDAP containers found
-    if len(ldap_containers) == 0:
+    if not ldap_containers:
         cr_rotating_log.write('[' + str(datetime.datetime.now()) + '] : '
                                 + str('No LDAP found') + '\n')
     # Get bind password
@@ -103,7 +91,7 @@ def main():
     except Exception as e:
         cr_rotating_log.write('[' + str(datetime.datetime.now()) + '] : ' + str(e) + '\n')
     # ------- END_Method 2 using consul ----------
-    if len(bind_password) > 0:
+    if bind_password:
         try:
             # Return oxtrust server DN
             server_dn = ldap_containers[0].exec_run(
@@ -166,10 +154,9 @@ def main():
             cr_rotating_log.write('[' + str(datetime.datetime.now()) + '] : ' + str(e) + '\n')
         # ------- END_Method 2 LDAP -------
         for container in oxtrust_containers:
-            network_dict = low_client.inspect_container(container.id)['NetworkSettings']['Networks']
+            network_dict = container.attrs['NetworkSettings']['Networks']
             first_default_network_name = str(network_dict.keys()[0])
-            ip = low_client.inspect_container(container.id)['NetworkSettings']['Networks'][first_default_network_name]
-            ['IPAddress'].strip()
+            ip = container.attrs['NetworkSettings']['Networks'][first_default_network_name]['IPAddress'].strip()
             # The user has disabled the CR or CR is not active
             if is_cr_enabled < 0:
                 cr_rotating_log.write('[' + str(datetime.datetime.now()) + '] : ' +
