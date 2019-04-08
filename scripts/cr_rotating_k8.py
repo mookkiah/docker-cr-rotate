@@ -95,7 +95,7 @@ def main():
         except Exception as e:
             cr_rotating_log.write('[' + str(datetime.datetime.now()) + '] : ' + str(e) + '\n')
     # No LDAP pods found
-    if len(ldap_pods) == 0:
+    if not ldap_pods:
         cr_rotating_log.write('[' + str(datetime.datetime.now()) + '] : ' + str('No LDAP found') + '\n')
     # Get bind password
     try:
@@ -107,7 +107,7 @@ def main():
     except Exception as e:
         cr_rotating_log.write('[' + str(datetime.datetime.now()) + '] : ' + str(e) + '\n')
     # ------- END_Method 2 using consul ----------
-    if len(bind_password) > 0:
+    if bind_password:
         try:
             # Return oxtrust server DN
             server_dn = stream(cli.connect_get_namespaced_pod_exec, ldap_pods[0].metadata.name,
