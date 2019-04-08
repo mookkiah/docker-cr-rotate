@@ -63,11 +63,14 @@ def main():
     config_manager = ConfigManager()
     cli = get_kube()
     # Get a list of all available pods
+
     pods = cli.list_pod_for_all_namespaces().items
     # Empty list to hold oxtrust pods
+    #oxtrust_pods = cli.list_namespaced_pod(label_selector='APP_NAME=oxtrust')
     oxtrust_pods = []
     # Empty list to hold LDAP containers . Usually and almost always will only have one
     ldap_pods = []
+    #ldap_pods = cli.list_namespaced_pod(label_selector='APP_NAME=opendj')
     bind_password_encoded = ''
     salt_code = ''
     bind_password = ''
