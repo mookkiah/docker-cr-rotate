@@ -34,10 +34,6 @@ def main():
     cr_rotating_log.write('[' + str(datetime.datetime.now()) + '] : ' +
                           str('Creating directory : /cr/logs/') + str(error) + '\n')
     config_manager = ConfigManager()
-    # Directory of Cache Refresh LDIF
-    directory = "/cr/ldif"
-    # Filename of Cache Refresh LDIF
-    filename = "/crldif"
     # Docker URL
     docker_url = 'unix://var/run/docker.sock'
     # Docker Client
@@ -105,13 +101,7 @@ def main():
             # The user has disabled the CR or CR is not active
             if is_cr_enabled < 0:
                 cr_rotating_log.write('[' + str(datetime.datetime.now()) + '] : ' +
-                                      str('Cache refresh is found to be disabled. Cleaning files...') + '\n')
-                # Check if the path for the LDIF exists and if so remove it
-                if os.path.isdir(directory):
-                    try:
-                        shutil.rmtree(directory)
-                    except Exception as e:
-                        cr_rotating_log.write('[' + str(datetime.datetime.now()) + '] : ' + str(e) + '\n')
+                                      str('Cache refresh is found to be disabled.') + '\n')
             # Check  the container has not been setup previously, the CR is enabled
             if ip != current_ip_in_ldap and is_cr_enabled >= 0 and current_ip_in_ldap not in oxtrust_ip_pool:
                 cr_rotating_log.write('[' + str(datetime.datetime.now()) + '] : ' +

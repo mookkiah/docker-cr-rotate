@@ -64,10 +64,6 @@ def main():
     cli = get_kube()
     # Get a list of all available pods
     pods = cli.list_pod_for_all_namespaces().items
-    # Directory of Cache Refresh LDIF
-    directory = "/cr/ldif"
-    # Filename of Cache Refresh LDIF
-    filename = "/crldif"
     # Empty list to hold oxtrust pods
     oxtrust_pods = []
     # Empty list to hold LDAP containers . Usually and almost always will only have one
@@ -160,13 +156,7 @@ def main():
                        command=['/bin/sh','-c','chown -R jetty:jetty /var/ox/identity/cr-snapshots'],
                        stderr=True, stdin=True,
                        stdout=True, tty=False)
-                cr_rotating_log.write('[' + str(datetime.datetime.now()) + '] : ' +
-                                        str('Creating file  : ') + directory + filename + ' at ' +
-                                        str(ldap_containers[0].metadata.name) + '\n')
-                stream(cli.connect_get_namespaced_pod_exec, ldap_pods[0].metadata.name, ldap_pods[0].metadata.namespace,
-                       command=['/bin/sh','-c','mkdir -p ' + directory],
-                       stderr=True, stdin=True,
-                       stdout=True, tty=False)
+
                 try:
                     conn_ldap.modify(server_dn + ',ou=appliances,o=gluu',
                                 {'oxTrustCacheRefreshServerIpAddress': [(MODIFY_REPLACE, [ip])]})
