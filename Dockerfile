@@ -24,12 +24,9 @@ RUN pip install -U pip
 COPY requirements.txt /tmp/requirements.txt
 RUN pip install --no-cache-dir -r /tmp/requirements.txt
 
-# ==========
-# misc stuff
-# ==========
-WORKDIR /opt/cr-rotate
-RUN mkdir -p /etc/certs
-
+# ===
+# ENV
+# ===
 ENV GLUU_CONFIG_ADAPTER consul
 ENV GLUU_CONSUL_HOST localhost
 ENV GLUU_CONSUL_PORT 8500
@@ -43,6 +40,13 @@ ENV GLUU_CONSUL_TOKEN_FILE /etc/certs/consul_token
 ENV GLUU_KUBERNETES_NAMESPACE default
 ENV GLUU_KUBERNETES_CONFIGMAP gluu
 ENV GLUU_LDAP_URL localhost:1636
+ENV GLUU_CONTAINER_METADATA docker
+
+# ==========
+# misc stuff
+# ==========
+WORKDIR /opt/cr-rotate
+RUN mkdir -p /etc/certs /cr/logs /cr/ldif
 
 COPY scripts /opt/cr-rotate/scripts
 RUN chmod +x /opt/cr-rotate/scripts/entrypoint.sh
