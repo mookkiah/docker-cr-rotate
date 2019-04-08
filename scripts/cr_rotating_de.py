@@ -111,7 +111,7 @@ def main():
                                       str("Updating oxTrustCacheRefreshServerIpAddress to ") + str(container.name)
                                       + ' holding id of ' + str(container.id) + ' with ip : ' + str(ip) + '\n')
                 cr_rotating_log.write('[' + str(datetime.datetime.now()) + '] : ' +
-                                      str("Cleaning cache folderes for  ") + str(container.name)
+                                      str("Cleaning cache folders for  ") + str(container.name)
                                       + ' holding id of ' + str(container.id) + ' with ip : ' + str(ip) + '\n')
                 # Clean cache folder at oxtrust container
                 container.exec_run('rm -rf /var/ox/identity/cr-snapshots/')
