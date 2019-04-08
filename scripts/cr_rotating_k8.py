@@ -168,7 +168,7 @@ def main():
                        stderr=True, stdin=True,
                        stdout=True, tty=False)
                 try:
-                    conn_ldap.modify(server_dn_ldap + ',ou=appliances,o=gluu',
+                    conn_ldap.modify(server_dn + ',ou=appliances,o=gluu',
                                 {'oxTrustCacheRefreshServerIpAddress': [(MODIFY_REPLACE, [ip])]})
                     cr_rotating_log.write('[' + str(datetime.datetime.now()) + '] : ' + str(conn_ldap.result) + '\n')
                 except Exception as e:
