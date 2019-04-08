@@ -19,7 +19,7 @@ fi
 
 case $GLUU_CONTAINER_METADATA in
     "docker")
-        ENTRYPOINT="/opt/cr-rotate/scripts/cr_rotating_de.py"
+        ENTRYPOINT="/opt/cr-rotate/scripts/cr_rotating_docker.py"
         ;;
     "kubernetes")
         ENTRYPOINT="/opt/cr-rotate/scripts/cr_rotating_k8.py"
