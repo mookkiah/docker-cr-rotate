@@ -81,6 +81,12 @@ def main():
         if len(Label) > 0:
             if "oxtrust" in Label:
                 oxtrust_containers.append(container)
+                # Get IP of conatiner and send it to IP pool lost
+                network_dict = low_client.inspect_container(container.id)['NetworkSettings']['Networks']
+                first_default_network_name = str(network_dict.keys()[0])
+                ip = low_client.inspect_container(container.id)['NetworkSettings']['Networks'][
+                    first_default_network_name]['IPAddress'].strip()
+                oxtrust_ip_pool.append(ip)
             elif "opendj" in Label:
                 ldap_containers.append(container)
     # No LDAP containers found
@@ -88,39 +94,11 @@ def main():
         cr_rotating_log.write('[' + str(datetime.datetime.now()) + '] : '
                                 + str('No LDAP found') + '\n')
     # Get bind password
-    for oxtrust_container in oxtrust_containers:
-        oxldap_prop_list = None
-        salt_list = None
-        # Get IP of conatiner and send it to IP pool lost
-        network_dict = low_client.inspect_container(oxtrust_container.id)['NetworkSettings']['Networks']
-        first_default_network_name = str(network_dict.keys()[0])
-        ip = low_client.inspect_container(oxtrust_container.id)['NetworkSettings']['Networks'][first_default_network_name][
-            'IPAddress'].strip()
-        oxtrust_ip_pool.append(ip)
-        # Return the ox-ldap.properties file as a list
-        oxldap_prop_list = oxtrust_container.exec_run('cat /etc/gluu/conf/ox-ldap.properties').output.split()
-        # Return the salt file as a list
-        salt_list = oxtrust_container.exec_run('cat /etc/gluu/conf/salt').output.split()
-        # Check if there exists a salt code in the salt list, if so set salt_code to it
-        if ''.join(salt_list).find('=') >= 0:
-            salt_code = salt_list[salt_list.index('=') + 1]
-        else:
-            cr_rotating_log.write('[' + str(datetime.datetime.now()) + '] : '
-                                    + str('Encoded salt cannot be found') + '\n')
-        # Check if there exists a an encoded bind password in the ox-ldap.properties, if so set encoded password to it
-        if ''.join(oxldap_prop_list).find('bindPassword') >= 0:
-            bind_password_encoded = oxldap_prop_list[oxldap_prop_list.index('bindPassword:') + 1]
-            # decode the bind password
-            bind_password = decrypt_text(bind_password_encoded, salt_code)
-        else:
-            cr_rotating_log.write('[' + str(datetime.datetime.now()) + '] : '
-                                    + str('Bind Password cannot be found') + '\n')
-    # ------- Method 2 using consul and LDAP ----------
     try:
-        bind_dn_ldap = config_manager.get("ldap_binddn")
-        bind_password_ldap = decrypt_text(config_manager.get("encoded_ox_ldap_pw"), config_manager.get("encoded_salt"))
-        ldap_server_ldap = Server(GLUU_LDAP_URL, port=1636, use_ssl=True)
-        conn_ldap = Connection(ldap_server_ldap, bind_dn_ldap, bind_password_ldap)
+        bind_dn = config_manager.get("ldap_binddn")
+        bind_password = decrypt_text(config_manager.get("encoded_ox_ldap_pw"), config_manager.get("encoded_salt"))
+        ldap_server = Server(GLUU_LDAP_URL, port=1636, use_ssl=True)
+        conn_ldap = Connection(ldap_server, bind_dn, bind_password)
         conn_ldap.bind()
     except Exception as e:
         cr_rotating_log.write('[' + str(datetime.datetime.now()) + '] : ' + str(e) + '\n')
@@ -190,8 +168,8 @@ def main():
         for container in oxtrust_containers:
             network_dict = low_client.inspect_container(container.id)['NetworkSettings']['Networks']
             first_default_network_name = str(network_dict.keys()[0])
-            ip = low_client.inspect_container(container.id)['NetworkSettings']['Networks']
-            [first_default_network_name]['IPAddress'].strip()
+            ip = low_client.inspect_container(container.id)['NetworkSettings']['Networks'][first_default_network_name]
+            ['IPAddress'].strip()
             # The user has disabled the CR or CR is not active
             if is_cr_enabled < 0:
                 cr_rotating_log.write('[' + str(datetime.datetime.now()) + '] : ' +
