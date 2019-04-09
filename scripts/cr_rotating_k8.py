@@ -105,13 +105,13 @@ def get_kube_conf():
 
 
 def main():
-    # check interval (by default per 1 hour)
+    # check interval (by default per 10 mins)
     GLUU_CR_ROTATION_CHECK = os.environ.get("GLUU_CR_ROTATION_CHECK", 60 * 60)
 
     try:
         check_interval = int(GLUU_CR_ROTATION_CHECK)
     except ValueError:
-        check_interval = 60 * 60
+        check_interval = 60 * 10
 
     config_manager = ConfigManager()
 
