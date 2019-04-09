@@ -3,7 +3,6 @@
 """
 updating cache refresh in gluu server
 Author : Mohammad Abudayyeh
-Email : mo@gluu.org
 """
 import base64
 import logging
