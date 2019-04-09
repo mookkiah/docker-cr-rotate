@@ -7,12 +7,12 @@ Author : Mohammad Abudayyeh
 import base64
 import logging
 import os
-import time
 
+import time
 import docker
 import pyDes
-from ldap3 import Server, Connection, MODIFY_REPLACE
 
+from ldap3 import Server, Connection, MODIFY_REPLACE
 from gluu_config import ConfigManager
 
 
