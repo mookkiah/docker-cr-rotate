@@ -99,12 +99,16 @@ def send_signal(conn_ldap, appliance):
             logger.info("Waiting for response...It may take up to 5 mins")
             check_ip = appliance["oxTrustCacheRefreshServerIpAddress"]
             process_time = 0
+            check = False
             starttime = time.time()
-            while str(check_ip).strip() in signal_ip or process_time < 300:
+            while not check:
+                if check_ip != signal_ip or round(process_time) > 300.0:
+                    check = True
                 check_ip = appliance["oxTrustCacheRefreshServerIpAddress"]
                 endtime = time.time()
                 process_time = endtime - starttime
-            if str(check_ip).strip() in signal_ip:
+
+            if check_ip == signal_ip:
                 # No nodes found . Reset to default
                 conn_ldap.modify(appliance.entry_dn,
                                  {'oxTrustCacheRefreshServerIpAddress': [(MODIFY_REPLACE, [default_ip])]})
