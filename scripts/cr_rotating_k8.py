@@ -28,6 +28,8 @@ fmt = logging.Formatter('%(levelname)s - %(asctime)s - %(message)s')
 ch.setFormatter(fmt)
 logger.addHandler(ch)
 
+signal_ip = '999.888.999.777'
+
 
 # Function to decrypt encoded password
 def decrypt_text(encrypted_text, key):
@@ -84,6 +86,58 @@ def update_appliance(conn_ldap, appliance, pod, ip):
         logger.warn("Unable to update CacheRefresh config; reason={}".format(e))
 
 
+def write_master_ip(ip):
+    with open('/cr/ip_file.txt', 'w+') as ip_file:
+        ip_file.write(str(ip))
+
+
+def check_master_ip(ip):
+    with open('/cr/ip_file.txt', 'a+') as ip_file:
+        ip_master = ip_file.read().strip()
+    if str(ip) in ip_master:
+        return True
+    return False
+
+
+def send_signal(conn_ldap, appliance):
+    default_ip = '255.255.255.255'
+    try:
+        logger.info("No oxtrust pods found on this node. Provisioning other oxtrust pods at other nodes...")
+        conn_ldap.modify(appliance.entry_dn,
+                         {'oxTrustCacheRefreshServerIpAddress': [(MODIFY_REPLACE, [signal_ip])]})
+        result = conn_ldap.result
+        if result["description"] == "success":
+            logger.info("Signal has been sent")
+            logger.info("Waiting for response...It may take up to 5 mins")
+            check_ip = appliance["oxTrustCacheRefreshServerIpAddress"]
+            process_time = 0
+            starttime = time.time()
+            while str(check_ip).strip() in signal_ip or process_time < 300:
+                check_ip = appliance["oxTrustCacheRefreshServerIpAddress"]
+                endtime = time.time()
+                process_time = endtime - starttime
+            if str(check_ip).strip() in signal_ip:
+                # No nodes found . Reset to default
+                conn_ldap.modify(appliance.entry_dn,
+                                 {'oxTrustCacheRefreshServerIpAddress': [(MODIFY_REPLACE, [default_ip])]})
+                result = conn_ldap.result
+
+                if result["description"] == "success":
+                    logger.info("No nodes found.Cache Refresh updated ip to default. Please add oxtrust pods")
+
+                else:
+                    logger.warn("Unable to update CacheRefresh to defaults; reason={}".format(result["message"]))
+
+            else:
+                logger.info("Oxtrust pods found at other nodes. Cache Refresh has been updated")
+
+        else:
+            logger.warn("Unable to send signal; reason={}".format(result["message"]))
+
+    except Exception as e:
+        logger.warn("Unable to update CacheRefresh config; reason={}".format(e))
+
+
 def get_kube_conf():
     cli = None
     # XXX: is there a better way to check if we are inside a cluster or not?
@@ -106,12 +160,12 @@ def get_kube_conf():
 
 def main():
     # check interval (by default per 10 mins)
-    GLUU_CR_ROTATION_CHECK = os.environ.get("GLUU_CR_ROTATION_CHECK", 60 * 10)
+    GLUU_CR_ROTATION_CHECK = os.environ.get("GLUU_CR_ROTATION_CHECK", 60 * 5)
 
     try:
         check_interval = int(GLUU_CR_ROTATION_CHECK)
     except ValueError:
-        check_interval = 60 * 10
+        check_interval = 60 * 5
 
     config_manager = ConfigManager()
 
@@ -132,11 +186,26 @@ def main():
             # Get a list of oxtrust pods
             oxtrust_pods = cli.list_pod_for_all_namespaces(label_selector='APP_NAME=oxtrust').items
             oxtrust_ip_pool = [get_pod_ip(pod) for pod in oxtrust_pods]
+            signalon = False
 
             with Connection(ldap_server, bind_dn, bind_password) as conn_ldap:
                 appliance = get_appliance(conn_ldap, inum)
                 current_ip_in_ldap = appliance["oxTrustCacheRefreshServerIpAddress"]
                 is_cr_enabled = bool(appliance["gluuVdsCacheRefreshEnabled"] == "enabled")
+
+                if current_ip_in_ldap in oxtrust_ip_pool and is_cr_enabled:
+                    write_master_ip(current_ip_in_ldap)
+
+                if check_master_ip(current_ip_in_ldap) and oxtrust_pods:
+                    signalon = True
+
+                if current_ip_in_ldap == signal_ip:
+                    logger.info("Signal received. Setting new oxtrust pod at this node to CacheRefresh ")
+                    signalon = True
+
+                if not oxtrust_pods and is_cr_enabled:
+                    send_signal(conn_ldap, appliance)
+
                 for pod in oxtrust_pods:
                     ip = get_pod_ip(pod)
 
@@ -146,7 +215,8 @@ def main():
                         logger.warn('Cache refresh is found to be disabled.')
 
                     # Check  the pod has not been setup previously, the CR is enabled
-                    if ip != current_ip_in_ldap and is_cr_enabled and current_ip_in_ldap not in oxtrust_ip_pool:
+                    if ip != current_ip_in_ldap and is_cr_enabled and current_ip_in_ldap not in oxtrust_ip_pool \
+                            and signalon:
                         logger.info("Current oxTrustCacheRefreshServerIpAddress: {}".format(current_ip_in_ldap))
 
                         # Clean cache folder at oxtrust pod
