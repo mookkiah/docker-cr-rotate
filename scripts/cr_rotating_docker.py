@@ -87,9 +87,15 @@ def write_master_ip(ip):
 
 
 def check_master_ip(ip):
-    ip_file = open("/cr/ip_file.txt", "r")
+    if not os.path.isdir('/cr'):
+        try:
+            os.makedirs('/cr')
+            ip_file = open('/cr/ip_file.txt', 'w+').close()
+        except Exception as e:
+            logger.warn("Unable to create dir for IP file; reason={}".format(e))
+    ip_file = open("/cr/ip_file.txt", "r+")
     ip_master = ip_file.read().strip()
-    if ip in ip_master:
+    if str(ip) in ip_master:
         return True
     return False
 
@@ -105,7 +111,6 @@ def send_signal(conn_ldap, appliance):
             logger.info("Signal has been sent")
             logger.info("Waiting for response...It may take up to 5 mins")
             check_ip = appliance["oxTrustCacheRefreshServerIpAddress"]
-            #updated this to a rotating check instead of a wait
             process_time = 0
             starttime = time.time()
             while check_ip == signal_ip or process_time < 300:
