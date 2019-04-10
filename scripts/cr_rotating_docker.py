@@ -82,7 +82,7 @@ def write_master_ip(ip):
             logger.warn("Unable to create dir for IP file; reason={}".format(e))
     open('/cr/ip_file.txt', 'w+').close()
     ip_file = open('/cr/ip_file.txt', 'w+')
-    ip_file.write(ip)
+    ip_file.write(str(ip))
     ip_file.close()
 
 
@@ -101,7 +101,7 @@ def check_master_ip(ip):
 
 
 def send_signal(conn_ldap, appliance):
-    default_ip = '255.255.255.0'
+    default_ip = '255.255.255.255'
     try:
         logger.info("No oxtrust containers found on this node. Provisioning other oxtrust containers at other nodes...")
         conn_ldap.modify(appliance.entry_dn,
@@ -181,7 +181,10 @@ def main():
                 if current_ip_in_ldap in oxtrust_ip_pool and is_cr_enabled:
                     write_master_ip(current_ip_in_ldap)
 
-                if current_ip_in_ldap == signal_ip or check_master_ip(current_ip_in_ldap):
+                if check_master_ip(current_ip_in_ldap) and oxtrust_containers:
+                    signalon = True
+
+                if current_ip_in_ldap == signal_ip:
                     signalon = True
 
                 if not oxtrust_containers and is_cr_enabled:
