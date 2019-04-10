@@ -75,26 +75,13 @@ def update_appliance(conn_ldap, appliance, container, ip):
 
 
 def write_master_ip(ip):
-    if not os.path.isdir('/cr'):
-        try:
-            os.makedirs('/cr')
-        except Exception as e:
-            logger.warn("Unable to create dir for IP file; reason={}".format(e))
-    open('/cr/ip_file.txt', 'w+').close()
-    ip_file = open('/cr/ip_file.txt', 'w+')
-    ip_file.write(str(ip))
-    ip_file.close()
+    with open('/cr/ip_file.txt', 'w+') as ip_file:
+        ip_file.write(str(ip))
 
 
 def check_master_ip(ip):
-    if not os.path.isdir('/cr'):
-        try:
-            os.makedirs('/cr')
-            ip_file = open('/cr/ip_file.txt', 'w+').close()
-        except Exception as e:
-            logger.warn("Unable to create dir for IP file; reason={}".format(e))
-    ip_file = open("/cr/ip_file.txt", "r+")
-    ip_master = ip_file.read().strip()
+    with open('/cr/ip_file.txt', 'a+') as ip_file:
+        ip_master = ip_file.read().strip()
     if str(ip) in ip_master:
         return True
     return False
@@ -113,11 +100,11 @@ def send_signal(conn_ldap, appliance):
             check_ip = appliance["oxTrustCacheRefreshServerIpAddress"]
             process_time = 0
             starttime = time.time()
-            while check_ip == signal_ip or process_time < 300:
+            while str(check_ip).strip() in signal_ip or process_time < 300:
                 check_ip = appliance["oxTrustCacheRefreshServerIpAddress"]
                 endtime = time.time()
                 process_time = endtime - starttime
-            if check_ip == signal_ip:
+            if str(check_ip).strip() in signal_ip:
                 # No nodes found . Reset to default
                 conn_ldap.modify(appliance.entry_dn,
                                  {'oxTrustCacheRefreshServerIpAddress': [(MODIFY_REPLACE, [default_ip])]})
@@ -141,12 +128,12 @@ def send_signal(conn_ldap, appliance):
 
 def main():
     # check interval (by default per 10 mins)
-    GLUU_CR_ROTATION_CHECK = os.environ.get("GLUU_CR_ROTATION_CHECK", 60 * 10)
+    GLUU_CR_ROTATION_CHECK = os.environ.get("GLUU_CR_ROTATION_CHECK", 60 * 5)
 
     try:
         check_interval = int(GLUU_CR_ROTATION_CHECK)
     except ValueError:
-        check_interval = 60 * 10
+        check_interval = 60 * 5
 
     config_manager = ConfigManager()
 
@@ -185,6 +172,7 @@ def main():
                     signalon = True
 
                 if current_ip_in_ldap == signal_ip:
+                    logger.info("Signal received. Setting new oxtrust container at this node to CacheRefresh ")
                     signalon = True
 
                 if not oxtrust_containers and is_cr_enabled:
