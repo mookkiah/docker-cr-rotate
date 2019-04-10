@@ -47,6 +47,7 @@ ENV GLUU_CONTAINER_METADATA docker
 # ==========
 WORKDIR /opt/cr-rotate
 RUN mkdir -p /etc/certs
+RUN mkdir -p /cr
 
 COPY scripts /opt/cr-rotate/scripts
 RUN chmod +x /opt/cr-rotate/scripts/entrypoint.sh
