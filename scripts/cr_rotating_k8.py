@@ -114,26 +114,22 @@ def send_signal(conn_ldap, appliance):
             process_time = 0
             starttime = time.time()
             while not check:
-                if check_ip != signal_ip or round(process_time) > 300.0:
-                    check = True
                 check_ip = appliance["oxTrustCacheRefreshServerIpAddress"]
                 endtime = time.time()
                 process_time = endtime - starttime
+                if check_ip != signal_ip or round(process_time) > 300.0:
+                    check = True
             if check_ip == signal_ip:
                 # No nodes found . Reset to default
                 conn_ldap.modify(appliance.entry_dn,
                                  {'oxTrustCacheRefreshServerIpAddress': [(MODIFY_REPLACE, [default_ip])]})
                 result = conn_ldap.result
-
                 if result["description"] == "success":
                     logger.info("No nodes found.Cache Refresh updated ip to default. Please add oxtrust pods")
-
                 else:
                     logger.warn("Unable to update CacheRefresh to defaults; reason={}".format(result["message"]))
-
             else:
                 logger.info("Oxtrust pods found at other nodes. Cache Refresh has been updated")
-
         else:
             logger.warn("Unable to send signal; reason={}".format(result["message"]))
 
