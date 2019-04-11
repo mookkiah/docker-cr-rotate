@@ -205,6 +205,10 @@ def main():
                 if not oxtrust_pods and is_cr_enabled:
                     send_signal(conn_ldap, appliance)
 
+                if current_ip_in_ldap == default_ip and is_cr_enabled and oxtrust_pods:
+                    logger.info("Oxtrust containers found after reseting to defaults.")
+                    signalon = True
+
                 for pod in oxtrust_pods:
                     ip = get_pod_ip(pod)
 

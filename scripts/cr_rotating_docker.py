@@ -24,6 +24,7 @@ ch.setFormatter(fmt)
 logger.addHandler(ch)
 
 signal_ip = '999.888.999.777'
+default_ip = '255.255.255.255'
 
 
 # Function to decrypt encoded password
@@ -88,7 +89,6 @@ def check_master_ip(ip):
 
 
 def send_signal(conn_ldap, appliance):
-    default_ip = '255.255.255.255'
     try:
         logger.info("No oxtrust containers found on this node. Provisioning other oxtrust containers at other nodes...")
         conn_ldap.modify(appliance.entry_dn,
@@ -176,6 +176,10 @@ def main():
                 if not oxtrust_containers and is_cr_enabled:
                     send_signal(conn_ldap, appliance)
 
+                # If no oxtrust was found the previous would set ip to default. If later oxtrust was found
+                if current_ip_in_ldap == default_ip and is_cr_enabled and oxtrust_containers:
+                    logger.info("Oxtrust containers found after reseting to defaults.")
+                    signalon = True
                 for container in oxtrust_containers:
                     ip = get_container_ip(container)
 
