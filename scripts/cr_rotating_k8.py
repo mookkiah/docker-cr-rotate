@@ -45,8 +45,7 @@ def get_pod_ip(pod):
 
 
 def clean_snapshot(pod, ip,connector=cli.connect_get_namespaced_pod_exec):
-    logger.info("Cleaning cache folders for {} holding UID of {} "
-                "with IP {}".format(pod.metadata.name, pod.metadata.uid, ip))
+    logger.info("Cleaning cache folders for {} with IP {}".format(pod.metadata.name, ip))
     stream(connector, pod.metadata.name, pod.metadata.namespace,
            command=['/bin/sh', '-c', 'rm -rf /var/ox/identity/cr-snapshots'],
            stderr=True, stdin=True,
@@ -74,8 +73,7 @@ def get_appliance(conn_ldap, inum):
 
 def update_appliance(conn_ldap, appliance, pod, ip):
     try:
-        logger.info("Updating oxTrustCacheRefreshServerIpAddress to {} "
-                    "holding UID of {} with IP {}".format(pod.metadata.name, pod.metadata.uid, ip))
+        logger.info("Updating oxTrustCacheRefreshServerIpAddress to {} with IP {}".format(pod.metadata.name,  ip))
         conn_ldap.modify(appliance.entry_dn,
                          {'oxTrustCacheRefreshServerIpAddress': [(MODIFY_REPLACE, [ip])]})
         result = conn_ldap.result
@@ -158,7 +156,7 @@ def get_kube_conf():
 
 
 def main():
-    # check interval (by default per 10 mins)
+    # check interval (by default per 5 mins)
     GLUU_CR_ROTATION_CHECK = os.environ.get("GLUU_CR_ROTATION_CHECK", 60 * 5)
 
     try:
@@ -206,7 +204,7 @@ def main():
                     send_signal(conn_ldap, appliance)
 
                 if current_ip_in_ldap == default_ip and is_cr_enabled and oxtrust_pods:
-                    logger.info("Oxtrust containers found after reseting to defaults.")
+                    logger.info("Oxtrust pods found after resetting to defaults.")
                     signalon = True
 
                 for pod in oxtrust_pods:

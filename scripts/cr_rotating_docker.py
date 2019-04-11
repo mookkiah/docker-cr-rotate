@@ -42,8 +42,7 @@ def get_container_ip(container):
 
 
 def clean_snapshot(container, ip):
-    logger.info("Cleaning cache folders for {} holding ID of {} "
-                "with IP {}".format(container.name, container.id, ip))
+    logger.info("Cleaning cache folders for {} with IP {}".format(container.name, ip))
     container.exec_run('rm -rf /var/ox/identity/cr-snapshots/')
     container.exec_run('mkdir /var/ox/identity/cr-snapshots/')
     # container doesn't have `jetty` user/group
@@ -62,8 +61,7 @@ def get_appliance(conn_ldap, inum):
 
 def update_appliance(conn_ldap, appliance, container, ip):
     try:
-        logger.info("Updating oxTrustCacheRefreshServerIpAddress to {} "
-                    "holding ID of {} with IP {}".format(container.name, container.id, ip))
+        logger.info("Updating oxTrustCacheRefreshServerIpAddress to {} with IP {}".format(container.name, ip))
         conn_ldap.modify(appliance.entry_dn,
                          {'oxTrustCacheRefreshServerIpAddress': [(MODIFY_REPLACE, [ip])]})
         result = conn_ldap.result
@@ -125,7 +123,7 @@ def send_signal(conn_ldap, appliance):
 
 
 def main():
-    # check interval (by default per 10 mins)
+    # check interval (by default per 5 mins)
     GLUU_CR_ROTATION_CHECK = os.environ.get("GLUU_CR_ROTATION_CHECK", 60 * 5)
 
     try:
@@ -178,7 +176,7 @@ def main():
 
                 # If no oxtrust was found the previous would set ip to default. If later oxtrust was found
                 if current_ip_in_ldap == default_ip and is_cr_enabled and oxtrust_containers:
-                    logger.info("Oxtrust containers found after reseting to defaults.")
+                    logger.info("Oxtrust containers found after resetting to defaults.")
                     signalon = True
                 for container in oxtrust_containers:
                     ip = get_container_ip(container)
