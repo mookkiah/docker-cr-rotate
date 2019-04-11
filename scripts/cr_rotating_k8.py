@@ -29,6 +29,7 @@ ch.setFormatter(fmt)
 logger.addHandler(ch)
 
 signal_ip = '999.888.999.777'
+default_ip = '255.255.255.255'
 
 
 # Function to decrypt encoded password
@@ -100,7 +101,6 @@ def check_master_ip(ip):
 
 
 def send_signal(conn_ldap, appliance):
-    default_ip = '255.255.255.255'
     try:
         logger.info("No oxtrust pods found on this node. Provisioning other oxtrust pods at other nodes...")
         conn_ldap.modify(appliance.entry_dn,
