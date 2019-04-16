@@ -72,7 +72,7 @@ spec:
       - name: GLUU_SECRET_ADAPTER
         value: "kubernetes"
       - name: GLUU_LDAP_URL
-        value: "localhost:1636"
+        value: ""opendj:1636"
       - name: GLUU_MAX_RAM_FRACTION
         value: "1"
     volumeMounts:
