@@ -30,13 +30,13 @@ metadata:
 spec:
   containers:
   - name: cr-rotate
-    image: alpine:3.2
+    image: gluufederation/cr-rotate:3.1.4_dev
     command:
       - /bin/sh
       - "-c"
       - "sleep 60m"
     imagePullPolicy: IfNotPresent
-    name: alpine
+    name: cr-rotate
     workingDir: "/"
     stdin: true
     tty: true
