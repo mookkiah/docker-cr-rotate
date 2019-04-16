@@ -41,7 +41,7 @@ spec:
     stdin: true
     tty: true
     env:
-      - name:GLUU_CONTAINER_METADATA
+      - name: GLUU_CONTAINER_METADATA
         value: "kubernetes"
       - name: GLUU_CONFIG_ADAPTER
         value: "consul"
