@@ -11,7 +11,7 @@ import pyDes
 
 import shutil
 import logging
-
+import time
 from kubernetes import client, config
 from kubernetes.client import Configuration
 from kubernetes.client.apis import core_v1_api
@@ -44,7 +44,8 @@ def get_pod_ip(pod):
     return pod.status.pod_ip
 
 
-def clean_snapshot(pod, ip,connector=cli.connect_get_namespaced_pod_exec):
+def clean_snapshot(pod, ip, cli):
+    connector = cli.connect_get_namespaced_pod_exec
     logger.info("Cleaning cache folders for {} with IP {}".format(pod.metadata.name, ip))
     stream(connector, pod.metadata.name, pod.metadata.namespace,
            command=['/bin/sh', '-c', 'rm -rf /var/ox/identity/cr-snapshots'],
@@ -221,7 +222,7 @@ def main():
                         logger.info("Current oxTrustCacheRefreshServerIpAddress: {}".format(current_ip_in_ldap))
 
                         # Clean cache folder at oxtrust pod
-                        clean_snapshot(pod, ip)
+                        clean_snapshot(pod, ip, cli)
                         update_appliance(conn_ldap, appliance, pod, ip)
             # delay
             time.sleep(check_interval)
