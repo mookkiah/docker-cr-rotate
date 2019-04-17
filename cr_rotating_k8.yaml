@@ -4,8 +4,8 @@ metadata:
  name: pods-list
 rules:
 - apiGroups: [""]
-  resources: ["pods"]
-  verbs: ["list"]
+  resources: ["deployments", "pods", "pods/log", "pods/exec", "persistentvolumeclaims"]
+  verbs: ["read","list","watch","create","get"]
 ---
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
@@ -30,17 +30,19 @@ metadata:
 spec:
   containers:
   - name: cr-rotate
-    image: alpine:3.2
+    image: gluufederation/cr-rotate:3.1.4_dev
     command:
       - /bin/sh
       - "-c"
       - "sleep 60m"
     imagePullPolicy: IfNotPresent
-    name: alpine
+    name: cr-rotate
     workingDir: "/"
     stdin: true
     tty: true
     env:
+      - name: GLUU_CONTAINER_METADATA
+        value: "kubernetes"
       - name: GLUU_CONFIG_ADAPTER
         value: "consul"
       - name: GLUU_CONSUL_HOST
@@ -70,13 +72,6 @@ spec:
       - name: GLUU_SECRET_ADAPTER
         value: "kubernetes"
       - name: GLUU_LDAP_URL
-        value: "localhost:1636"
+        value: "opendj:1636"
       - name: GLUU_MAX_RAM_FRACTION
         value: "1"
-    volumeMounts:
-    - name: cr-rotate
-      mountPath: "/root/.kube"
-  volumes:
-  - name: cr-rotate
-    hostPath:
-      path: "/root/.kube"
