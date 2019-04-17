@@ -6,19 +6,16 @@ Author : Mohammad Abudayyeh
 """
 # ------------------------------------
 import base64
-import os
-import pyDes
-
-import shutil
 import logging
+import os
+import sys
 import time
-from kubernetes import client, config
-from kubernetes.client import Configuration
-from kubernetes.client.apis import core_v1_api
-from kubernetes.client.rest import ApiException
-from kubernetes.stream import stream
 
-from ldap3 import Server, Connection, MODIFY_REPLACE, MODIFY_ADD, MODIFY_DELETE, SUBTREE, ALL, BASE, LEVEL
+import pyDes
+from kubernetes import client, config
+from kubernetes.stream import stream
+from ldap3 import Server, Connection, MODIFY_REPLACE
+
 from gluu_config import ConfigManager
 
 logger = logging.getLogger("cr_rotate")
@@ -44,8 +41,7 @@ def get_pod_ip(pod):
     return pod.status.pod_ip
 
 
-def clean_snapshot(pod, ip, cli):
-    connector = cli.connect_get_namespaced_pod_exec
+def clean_snapshot(pod, ip, connector):
     logger.info("Cleaning cache folders for {} with IP {}".format(pod.metadata.name, ip))
     stream(connector, pod.metadata.name, pod.metadata.namespace,
            command=['/bin/sh', '-c', 'rm -rf /var/ox/identity/cr-snapshots'],
@@ -74,7 +70,7 @@ def get_appliance(conn_ldap, inum):
 
 def update_appliance(conn_ldap, appliance, pod, ip):
     try:
-        logger.info("Updating oxTrustCacheRefreshServerIpAddress to {} with IP {}".format(pod.metadata.name,  ip))
+        logger.info("Updating oxTrustCacheRefreshServerIpAddress to {} with IP {}".format(pod.metadata.name, ip))
         conn_ldap.modify(appliance.entry_dn,
                          {'oxTrustCacheRefreshServerIpAddress': [(MODIFY_REPLACE, [ip])]})
         result = conn_ldap.result
@@ -137,22 +133,25 @@ def send_signal(conn_ldap, appliance):
 
 
 def get_kube_conf():
-    cli = None
-    # XXX: is there a better way to check if we are inside a cluster or not?
-    if "KUBERNETES_SERVICE_HOST" in os.environ:
+    config_loaded = False
+
+    try:
         config.load_incluster_config()
-        cli = client.CoreV1Api()
-    else:
+        config_loaded = True
+    except config.config_exception.ConfigException:
+        logger.warn("Unable to load in-cluster configuration; trying to load from Kube config file")
         try:
-            # Load Kubernetes Configuration
             config.load_kube_config()
-            c = Configuration()
-            c.assert_hostname = False
-            Configuration.set_default(c)
-            # Set Kubernetes Client
-            cli = core_v1_api.CoreV1Api()
-        except Exception as e:
-            logger.warn("Unable load Kube config; reason={}".format(e))
+            config_loaded = True
+        except (IOError, config.config_exception.ConfigException) as exc:
+            logger.warn("Unable to load Kube config; reason={}".format(exc))
+
+    if not config_loaded:
+        logger.error("Unable to load in-cluster or Kube config")
+        sys.exit(1)
+
+    cli = client.CoreV1Api()
+    cli.api_client.configuration.assert_hostname = False
     return cli
 
 
@@ -222,7 +221,7 @@ def main():
                         logger.info("Current oxTrustCacheRefreshServerIpAddress: {}".format(current_ip_in_ldap))
 
                         # Clean cache folder at oxtrust pod
-                        clean_snapshot(pod, ip, cli)
+                        clean_snapshot(pod, ip, cli.connect_get_namespaced_pod_exec)
                         update_appliance(conn_ldap, appliance, pod, ip)
             # delay
             time.sleep(check_interval)
@@ -232,4 +231,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
