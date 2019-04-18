@@ -24,11 +24,12 @@ RUN pip install -U pip
 COPY requirements.txt /tmp/requirements.txt
 RUN pip install --no-cache-dir -r /tmp/requirements.txt
 
-# ==========
-# misc stuff
-# ==========
-WORKDIR /opt/cr-rotate
-RUN mkdir -p /etc/certs
+# =======
+# License
+# =======
+
+RUN mkdir -p /licenses
+COPY LICENSE /licenses/
 
 # ==========
 # Config ENV
@@ -65,6 +66,20 @@ ENV GLUU_SECRET_VAULT_CACERT_FILE /etc/certs/vault_ca.crt
 ENV GLUU_SECRET_KUBERNETES_NAMESPACE default
 ENV GLUU_SECRET_KUBERNETES_SECRET gluu
 ENV GLUU_SECRET_KUBERNETES_USE_KUBE_CONFIG false
+
+# ===========
+# Generic ENV
+# ===========
+
+ENV GLUU_LDAP_URL localhost:1636
+ENV GLUU_CONTAINER_METADATA docker
+
+# ==========
+# misc stuff
+# ==========
+WORKDIR /opt/cr-rotate
+RUN mkdir -p /etc/certs
+RUN mkdir -p /cr
 
 COPY scripts /opt/cr-rotate/scripts
 RUN chmod +x /opt/cr-rotate/scripts/entrypoint.sh
