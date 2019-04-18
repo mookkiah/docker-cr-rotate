@@ -13,7 +13,9 @@ docker run \
     --network container:consul \
     --name cr_rotates \
     -e GLUU_CONFIG_ADAPTER=consul \
+    -e GLUU_CONFIG_CONSUL_HOST=consul \
     -e GLUU_SECRET_ADAPTER=vault \
+    -e GLUU_SECRET_VAULT_HOST=vault \
     -e GLUU_CONTAINER_METADATA=docker \
     -v /var/run/docker.sock:/var/run/docker.sock \
     -v /path/to/vault_role_id.txt:/etc/certs/vault_role_id \
