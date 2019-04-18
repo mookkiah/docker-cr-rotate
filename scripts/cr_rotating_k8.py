@@ -16,7 +16,7 @@ from kubernetes import client, config
 from kubernetes.stream import stream
 from ldap3 import Server, Connection, MODIFY_REPLACE
 
-from gluu_config import ConfigManager
+from gluulib import get_manager
 
 logger = logging.getLogger("cr_rotate")
 logger.setLevel(logging.INFO)
@@ -164,19 +164,19 @@ def main():
     except ValueError:
         check_interval = 60 * 5
 
-    config_manager = ConfigManager()
+    manager = get_manager()
 
     cli = get_kube_conf()
 
     # Get URL of LDAP
     GLUU_LDAP_URL = os.environ.get("GLUU_LDAP_URL", "localhost:1636")
 
-    bind_dn = config_manager.get("ldap_binddn")
-    bind_password = decrypt_text(config_manager.get("encoded_ox_ldap_pw"), config_manager.get("encoded_salt"))
+    bind_dn = manager.config.get("ldap_binddn")
+    bind_password = decrypt_text(manager.secret.get("encoded_ox_ldap_pw"), manager.secret.get("encoded_salt"))
 
     ldap_server = Server(GLUU_LDAP_URL, port=1636, use_ssl=True)
 
-    inum = config_manager.get("inumAppliance")
+    inum = manager.config.get("inumAppliance")
 
     try:
         while True:
