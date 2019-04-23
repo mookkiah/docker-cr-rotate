@@ -3,3 +3,4 @@ pydes==2.0.1
 kubernetes==9.0.0
 docker==3.7.2
 ldap3==2.3
+hvac==0.7.0
