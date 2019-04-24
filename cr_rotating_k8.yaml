@@ -30,7 +30,7 @@ metadata:
 spec:
   containers:
   - name: cr-rotate
-    image: gluufederation/cr-rotate:3.1.4_dev
+    image: gluufederation/cr-rotate:3.1.5_dev
     command:
       - /bin/sh
       - "-c"
