@@ -107,7 +107,7 @@ def send_signal(conn_ldap, appliance):
                 if check_ip != signal_ip or round(process_time) > 300.0:
                     check = True
                 time.sleep(5)
-            if check_ip == signal_ip:
+            if check_ip == signal_ip or check_ip == default_ip:
                 # No nodes found . Reset to default
                 conn_ldap.modify(appliance.entry_dn,
                                  {'oxTrustCacheRefreshServerIpAddress': [(MODIFY_REPLACE, [default_ip])]})
