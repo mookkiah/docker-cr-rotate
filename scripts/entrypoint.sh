@@ -27,7 +27,9 @@ case $GLUU_CONTAINER_METADATA in
 esac
 
 if [ -f /etc/redhat-release ]; then
+    source scl_source enable python27 && python /opt/cr-rotate/scripts/wait_for.py --deps config,secret,ldap
     source scl_source enable python27 && python $ENTRYPOINT
 else
+    python /opt/cr-rotate/scripts/wait_for.py --deps config,secret,ldap
     python $ENTRYPOINT
 fi
