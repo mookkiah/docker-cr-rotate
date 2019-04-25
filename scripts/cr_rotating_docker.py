@@ -101,7 +101,6 @@ def send_signal(conn_ldap, appliance):
             starttime = time.time()
             while not check:
                 check_ip = appliance["oxTrustCacheRefreshServerIpAddress"]
-                logger.info("CHECK IP: {}".format(check_ip))
                 endtime = time.time()
                 process_time = endtime - starttime
                 if check_ip != signal_ip or round(process_time) > 300.0:
