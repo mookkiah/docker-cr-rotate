@@ -95,8 +95,9 @@ def check_master_ip(ip):
     return False
 
 
-def send_signal(conn_ldap, appliance):
+def send_signal(conn_ldap, inum):
     try:
+        appliance = get_appliance(conn_ldap, inum)
         logger.info("No oxtrust pods found on this node. Provisioning other oxtrust pods at other nodes...")
         conn_ldap.modify(appliance.entry_dn,
                          {'oxTrustCacheRefreshServerIpAddress': [(MODIFY_REPLACE, [signal_ip])]})
@@ -116,7 +117,7 @@ def send_signal(conn_ldap, appliance):
                 if check_ip != signal_ip or round(process_time) > 300.0:
                     check = True
                 time.sleep(5)
-            if check_ip == signal_ip or check_ip == default_ip:
+            if check_ip == signal_ip:
                 # No nodes found . Reset to default
                 conn_ldap.modify(appliance.entry_dn,
                                  {'oxTrustCacheRefreshServerIpAddress': [(MODIFY_REPLACE, [default_ip])]})
@@ -202,7 +203,7 @@ def main():
                     signalon = True
 
                 if not oxtrust_pods and is_cr_enabled:
-                    send_signal(conn_ldap, appliance)
+                    send_signal(conn_ldap, inum)
 
                 if current_ip_in_ldap == default_ip and is_cr_enabled and oxtrust_pods:
                     logger.info("Oxtrust pods found after resetting to defaults.")
@@ -216,6 +217,9 @@ def main():
                         # TODO: should we bail since CR is disabled?
                         logger.warn('Cache refresh is found to be disabled.')
 
+                    appliance = get_appliance(conn_ldap, inum)
+                    current_ip_in_ldap = appliance["oxTrustCacheRefreshServerIpAddress"]
+                    is_cr_enabled = bool(appliance["gluuVdsCacheRefreshEnabled"] == "enabled")
                     # Check  the pod has not been setup previously, the CR is enabled
                     if ip != current_ip_in_ldap and is_cr_enabled and current_ip_in_ldap not in oxtrust_ip_pool \
                             and signalon:
