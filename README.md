@@ -2,6 +2,10 @@
 
 Docker Cache Refresh script and components
 
+## Documentation
+
+The official documentation can be found at https://gluu.org/docs/de/3.1.6.
+
 ### Example on Docker Single host and Swarm:
 
 Run this command:
@@ -20,5 +24,5 @@ docker run \
     -v /var/run/docker.sock:/var/run/docker.sock \
     -v /path/to/vault_role_id.txt:/etc/certs/vault_role_id \
     -v /path/to/vault_secret_id.txt:/etc/certs/vault_secret_id \
-    gluufederation/cr-rotate:3.1.5_dev
+    gluufederation/cr-rotate:3.1.6_dev
 ```
