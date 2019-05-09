@@ -2,6 +2,12 @@
 
 Here you can see an overview of changes between each release.
 
+## Version 3.1.5_02
+
+Released on May 10th, 2019.
+
+* Alpine upgraded to v3.9. Ref: https://github.com/GluuFederation/gluu-docker/issues/71.
+
 ## Version 3.1.5_01
 
 Released on April 25th, 2019.
