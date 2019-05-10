@@ -24,5 +24,5 @@ docker run \
     -v /var/run/docker.sock:/var/run/docker.sock \
     -v /path/to/vault_role_id.txt:/etc/certs/vault_role_id \
     -v /path/to/vault_secret_id.txt:/etc/certs/vault_secret_id \
-    gluufederation/cr-rotate:3.1.6_dev
+    gluufederation/cr-rotate:4.0.0_dev
 ```
