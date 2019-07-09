@@ -11,27 +11,48 @@ cat << LICENSE_ACK
 
 LICENSE_ACK
 
+# check persistence type
+case "${GLUU_PERSISTENCE_TYPE}" in
+    ldap|couchbase|hybrid)
+        ;;
+    *)
+        echo "unsupported GLUU_PERSISTENCE_TYPE value; please choose 'ldap', 'couchbase', or 'hybrid'"
+        exit 1
+        ;;
+esac
+
+# check mapping used by LDAP
+if [ "${GLUU_PERSISTENCE_TYPE}" = "hybrid" ]; then
+    case "${GLUU_PERSISTENCE_LDAP_MAPPING}" in
+        default|user|cache|site|statistic)
+            ;;
+        *)
+            echo "unsupported GLUU_PERSISTENCE_LDAP_MAPPING value; please choose 'default', 'user', 'cache', 'site', or 'statistic'"
+            exit 1
+            ;;
+    esac
+fi
+
+# run wait_for functions
+deps="config,secret"
+
+if [ "${GLUU_PERSISTENCE_TYPE}" = "hybrid" ]; then
+    deps="${deps},ldap,couchbase"
+else
+    deps="${deps},${GLUU_PERSISTENCE_TYPE}"
+fi
+
 if [ "$GLUU_CONTAINER_METADATA" != "docker" ] && [ "$GLUU_CONTAINER_METADATA" != "kubernetes" ]; then
     echo "Warning: invalid value for GLUU_CONTAINER_METADATA environment variable; fallback to Docker metadata"
     echo ""
     GLUU_CONTAINER_METADATA="docker"
 fi
 
-# case $GLUU_CONTAINER_METADATA in
-#     "docker")
-#         ENTRYPOINT="/opt/cr-rotate/scripts/cr_rotating_docker.py"
-#         ;;
-#     "kubernetes")
-#         ENTRYPOINT="/opt/cr-rotate/scripts/cr_rotating_k8.py"
-#         ;;
-# esac
-
-ENTRYPOINT="/opt/cr-rotate/scripts/entrypoint.py"
 
 if [ -f /etc/redhat-release ]; then
-    source scl_source enable python27 && python /opt/cr-rotate/scripts/wait_for.py --deps config,secret,ldap
-    source scl_source enable python27 && python $ENTRYPOINT
+    source scl_source enable python27 && python /opt/cr-rotate/scripts/wait_for.py --deps="$deps"
+    source scl_source enable python27 && python /opt/cr-rotate/scripts/entrypoint.py
 else
-    python /opt/cr-rotate/scripts/wait_for.py --deps config,secret,ldap
-    python $ENTRYPOINT
+    python /opt/cr-rotate/scripts/wait_for.py --deps="$deps"
+    python /opt/cr-rotate/scripts/entrypoint.py
 fi

@@ -14,17 +14,18 @@ from kubernetes import client, config
 from kubernetes.stream import stream
 from ldap3 import Server, Connection, MODIFY_REPLACE
 
+from cbm import CBM
 from gluulib import get_manager
 
-logger = logging.getLogger("cr_rotate")
+logger = logging.getLogger("entrypoint")
 logger.setLevel(logging.INFO)
 ch = logging.StreamHandler()
-fmt = logging.Formatter('%(levelname)s - %(asctime)s - %(message)s')
+fmt = logging.Formatter('%(levelname)s - %(name)s - %(asctime)s - %(message)s')
 ch.setFormatter(fmt)
 logger.addHandler(ch)
 
-signal_ip = '999.888.999.777'
-default_ip = '255.255.255.255'
+SIGNAL_IP = '999.888.999.777'
+DEFAULT_IP = '255.255.255.255'
 
 
 def decrypt_text(encrypted_text, key):
@@ -144,29 +145,160 @@ class KubernetesClient(BaseClient):
         )
 
 
-def get_configuration(conn_ldap):
-    conn_ldap.search(
-        "ou=configuration,o=gluu",
-        '(objectclass=gluuConfiguration)',
-        attributes=['oxTrustCacheRefreshServerIpAddress',
-                    'gluuVdsCacheRefreshEnabled'],
-    )
-    return conn_ldap.entries[0]
+class BaseBackend(object):
+    def get_configuration(self):
+        raise NotImplementedError
+
+    def update_configuration(self):
+        raise NotImplementedError
 
 
-def update_configuration(conn_ldap, configuration, ip):
-    try:
-        conn_ldap.modify(
-            configuration.entry_dn,
-            {'oxTrustCacheRefreshServerIpAddress': [(MODIFY_REPLACE, [ip])]}
+class LDAPBackend(BaseBackend):
+    def __init__(self, host, user, password):
+        ldap_server = Server(host, port=1636, use_ssl=True)
+        self.backend = Connection(ldap_server, user, password)
+
+    def get_configuration(self):
+        with self.backend as conn:
+            conn.search(
+                "ou=configuration,o=gluu",
+                '(objectclass=gluuConfiguration)',
+                attributes=['oxTrustCacheRefreshServerIpAddress',
+                            'gluuVdsCacheRefreshEnabled'],
+            )
+
+            if not conn.entries:
+                return {}
+
+            entry = conn.entries[0]
+            config = {
+                "id": entry.entry_dn,
+                "oxTrustCacheRefreshServerIpAddress": entry["oxTrustCacheRefreshServerIpAddress"][0],
+                "gluuVdsCacheRefreshEnabled": entry["gluuVdsCacheRefreshEnabled"][0],
+            }
+            return config
+
+    def update_configuration(self, id_, ip):
+        with self.backend as conn:
+            conn.modify(
+                id_,
+                {'oxTrustCacheRefreshServerIpAddress': [(MODIFY_REPLACE, [ip])]}
+            )
+            result = {
+                "success": conn.result["description"] == "success",
+                "message": conn.result["message"],
+            }
+            return result
+
+
+class CouchbaseBackend(BaseBackend):
+    def __init__(self, host, user, password):
+        self.backend = CBM(host, user, password)
+
+    def get_configuration(self):
+        req = self.backend.exec_query(
+            "SELECT oxTrustCacheRefreshServerIpAddress, gluuVdsCacheRefreshEnabled "
+            "FROM `gluu` "
+            "USE KEYS 'configuration'"
         )
-        result = conn_ldap.result
-        if result["description"] == "success":
-            logger.info("CacheRefresh config has been updated")
+
+        if not req.ok:
+            return {}
+
+        config = req.json()["results"][0]
+
+        if not config:
+            return {}
+
+        config.update({"id": "configuration"})
+        return config
+
+    def update_configuration(self, id_, ip):
+        req = self.backend.exec_query(
+            "UPDATE `gluu` "
+            "USE KEYS '{0}' "
+            "SET oxTrustCacheRefreshServerIpAddress='{1}' "
+            "RETURNING oxTrustCacheRefreshServerIpAddress".format(id_, ip)
+        )
+
+        result = {
+            "success": req.ok,
+            "message": req.text,
+        }
+        return result
+
+
+class CacheRefreshRotator(object):
+    def __init__(self, manager, persistence_type, ldap_mapping="default"):
+        if persistence_type in ("ldap", "couchbase"):
+            backend_type = persistence_type
         else:
-            logger.warn("Unable to update CacheRefresh config; reason={}".format(result["message"]))
-    except Exception as e:
-        logger.warn("Unable to update CacheRefresh config; reason={}".format(e))
+            # persistence_type is hybrid
+            if ldap_mapping == "default":
+                backend_type = "ldap"
+            else:
+                backend_type = "couchbase"
+
+        # resolve backend
+        if backend_type == "ldap":
+            host = os.environ.get("GLUU_LDAP_URL", "localhost:1636")
+            user = manager.config.get("ldap_binddn")
+            password = decrypt_text(
+                manager.secret.get("encoded_ox_ldap_pw"),
+                manager.secret.get("encoded_salt"),
+            )
+            backend_cls = LDAPBackend
+        else:
+            host = os.environ.get("GLUU_COUCHBASE_URL", "localhost")
+            user = manager.config.get("couchbase_server_user")
+            password = decrypt_text(
+                manager.secret.get("encoded_couchbase_server_pw"),
+                manager.secret.get("encoded_salt"),
+            )
+            backend_cls = CouchbaseBackend
+
+        self.backend = backend_cls(host, user, password)
+        self.manager = manager
+
+    def send_signal(self):
+        try:
+            config = self.backend.get_configuration()
+
+            logger.info("No oxtrust containers found on this node. Provisioning other oxtrust containers at other nodes...")
+            req = self.backend.update_configuration(config["id"], SIGNAL_IP)
+
+            if req["success"]:
+                check_ip = config["oxTrustCacheRefreshServerIpAddress"]
+                logger.info("Signal has been sent")
+                logger.info("Waiting for response...It may take up to 5 mins")
+                process_time = 0
+                check = False
+                starttime = time.time()
+
+                while not check:
+                    config = self.backend.get_configuration()
+                    check_ip = config["oxTrustCacheRefreshServerIpAddress"]
+                    endtime = time.time()
+                    process_time = endtime - starttime
+
+                    if check_ip != SIGNAL_IP or round(process_time) > 300.0:
+                        check = True
+
+                    time.sleep(5)
+
+                if check_ip == SIGNAL_IP:
+                    # No nodes found . Reset to default
+                    req = self.backend.update_configuration(config["id"], DEFAULT_IP)
+                    if req["success"]:
+                        logger.info("No nodes found.Cache Refresh updated ip to default. Please add oxtrust containers")
+                    else:
+                        logger.warn("Unable to update CacheRefresh to defaults; reason={}".format(req["message"]))
+                else:
+                    logger.info("Oxtrust containers found at other nodes. Cache Refresh has been updated")
+            else:
+                logger.warn("Unable to send signal; reason={}".format(req["message"]))
+        except Exception as e:
+            logger.warn("Unable to update CacheRefresh config; reason={}".format(e))
 
 
 def write_master_ip(ip):
@@ -182,51 +314,6 @@ def check_master_ip(ip):
     return False
 
 
-def send_signal(conn_ldap):
-    try:
-        config = get_configuration(conn_ldap)
-        logger.info("No oxtrust containers found on this node. Provisioning other oxtrust containers at other nodes...")
-        conn_ldap.modify(config.entry_dn,
-                         {'oxTrustCacheRefreshServerIpAddress': [(MODIFY_REPLACE, [signal_ip])]})
-        result = conn_ldap.result
-
-        if result["description"] == "success":
-            check_ip = config["oxTrustCacheRefreshServerIpAddress"]
-            logger.info("Signal has been sent")
-            logger.info("Waiting for response...It may take up to 5 mins")
-            process_time = 0
-            check = False
-            starttime = time.time()
-
-            while not check:
-                config = get_configuration(conn_ldap)
-                check_ip = config["oxTrustCacheRefreshServerIpAddress"]
-                endtime = time.time()
-                process_time = endtime - starttime
-
-                if check_ip != signal_ip or round(process_time) > 300.0:
-                    check = True
-
-                time.sleep(5)
-
-            if check_ip == signal_ip:
-                # No nodes found . Reset to default
-                conn_ldap.modify(config.entry_dn,
-                                 {'oxTrustCacheRefreshServerIpAddress': [(MODIFY_REPLACE, [default_ip])]})
-                result = conn_ldap.result
-
-                if result["description"] == "success":
-                    logger.info("No nodes found.Cache Refresh updated ip to default. Please add oxtrust containers")
-                else:
-                    logger.warn("Unable to update CacheRefresh to defaults; reason={}".format(result["message"]))
-            else:
-                logger.info("Oxtrust containers found at other nodes. Cache Refresh has been updated")
-        else:
-            logger.warn("Unable to send signal; reason={}".format(result["message"]))
-    except Exception as e:
-        logger.warn("Unable to update CacheRefresh config; reason={}".format(e))
-
-
 def main():
     GLUU_CONTAINER_METADATA = os.environ.get("GLUU_CONTAINER_METADATA", "docker")
 
@@ -240,18 +327,15 @@ def main():
 
     manager = get_manager()
 
-    # Get creds for LDAP access
-    bind_dn = manager.config.get("ldap_binddn")
-    bind_password = decrypt_text(manager.secret.get("encoded_ox_ldap_pw"), manager.secret.get("encoded_salt"))
+    persistence_type = os.environ.get("GLUU_PERSISTENCE_TYPE", "ldap")
+    ldap_mapping = os.environ.get("GLUU_PERSISTENCE_LDAP_MAPPING", "default")
+
+    rotator = CacheRefreshRotator(manager, persistence_type, ldap_mapping)
 
     if GLUU_CONTAINER_METADATA == "kubernetes":
         client = KubernetesClient()
     else:
         client = DockerClient()
-
-    # Get URL of LDAP
-    GLUU_LDAP_URL = os.environ.get("GLUU_LDAP_URL", "localhost:1636")
-    ldap_server = Server(GLUU_LDAP_URL, port=1636, use_ssl=True)
 
     try:
         while True:
@@ -259,50 +343,55 @@ def main():
             oxtrust_ip_pool = [client.get_container_ip(container) for container in oxtrust_containers]
             signalon = False
 
-            with Connection(ldap_server, bind_dn, bind_password) as conn_ldap:
-                config = get_configuration(conn_ldap)
+            config = rotator.backend.get_configuration()
+            current_ip_in_ldap = config["oxTrustCacheRefreshServerIpAddress"]
+            is_cr_enabled = config["gluuVdsCacheRefreshEnabled"] in ("enabled", True)
+            # is_cr_enabled = True
+
+            if current_ip_in_ldap in oxtrust_ip_pool and is_cr_enabled:
+                write_master_ip(current_ip_in_ldap)
+
+            if check_master_ip(current_ip_in_ldap) and oxtrust_containers:
+                signalon = True
+
+            if current_ip_in_ldap == SIGNAL_IP:
+                logger.info("Signal received. Setting new oxtrust container at this node to CacheRefresh ")
+                signalon = True
+
+            if not oxtrust_containers and is_cr_enabled:
+                rotator.send_signal()
+
+            # If no oxtrust was found the previous would set ip to default. If later oxtrust was found
+            if current_ip_in_ldap == DEFAULT_IP and is_cr_enabled and oxtrust_containers:
+                logger.info("Oxtrust containers found after resetting to defaults.")
+                signalon = True
+
+            for container in oxtrust_containers:
+                ip = client.get_container_ip(container)
+
+                # The user has disabled the CR or CR is not active
+                if not is_cr_enabled:
+                    logger.warn('Cache refresh is found to be disabled.')
+
+                config = rotator.backend.get_configuration()
                 current_ip_in_ldap = config["oxTrustCacheRefreshServerIpAddress"]
                 is_cr_enabled = config["gluuVdsCacheRefreshEnabled"] in ("enabled", True)
+                # is_cr_enabled = True
 
-                if current_ip_in_ldap in oxtrust_ip_pool and is_cr_enabled:
-                    write_master_ip(current_ip_in_ldap)
+                # Check  the container has not been setup previously, the CR is enabled
+                if ip != current_ip_in_ldap and is_cr_enabled and current_ip_in_ldap not in oxtrust_ip_pool \
+                        and signalon:
+                    logger.info("Current oxTrustCacheRefreshServerIpAddress: {}".format(current_ip_in_ldap))
 
-                if check_master_ip(current_ip_in_ldap) and oxtrust_containers:
-                    signalon = True
+                    # Clean cache folder at oxtrust container
+                    client.clean_snapshot(container)
 
-                if current_ip_in_ldap == signal_ip:
-                    logger.info("Signal received. Setting new oxtrust container at this node to CacheRefresh ")
-                    signalon = True
-
-                if not oxtrust_containers and is_cr_enabled:
-                    send_signal(conn_ldap)
-
-                # If no oxtrust was found the previous would set ip to default. If later oxtrust was found
-                if current_ip_in_ldap == default_ip and is_cr_enabled and oxtrust_containers:
-                    logger.info("Oxtrust containers found after resetting to defaults.")
-                    signalon = True
-
-                for container in oxtrust_containers:
-                    ip = client.get_container_ip(container)
-
-                    # The user has disabled the CR or CR is not active
-                    if not is_cr_enabled:
-                        logger.warn('Cache refresh is found to be disabled.')
-
-                    config = get_configuration(conn_ldap)
-                    current_ip_in_ldap = config["oxTrustCacheRefreshServerIpAddress"]
-                    is_cr_enabled = config["gluuVdsCacheRefreshEnabled"] in ("enabled", True)
-
-                    # Check  the container has not been setup previously, the CR is enabled
-                    if ip != current_ip_in_ldap and is_cr_enabled and current_ip_in_ldap not in oxtrust_ip_pool \
-                            and signalon:
-                        logger.info("Current oxTrustCacheRefreshServerIpAddress: {}".format(current_ip_in_ldap))
-
-                        # Clean cache folder at oxtrust container
-                        client.clean_snapshot(container)
-
-                        logger.info("Updating oxTrustCacheRefreshServerIpAddress to {} with IP {}".format(container.name, ip))
-                        update_configuration(conn_ldap, config, ip)
+                    logger.info("Updating oxTrustCacheRefreshServerIpAddress to {} with IP {}".format(container.name, ip))
+                    req = rotator.backend.update_configuration(config["id"], ip)
+                    if req["success"]:
+                        logger.info("CacheRefresh config has been updated")
+                    else:
+                        logger.warn("Unable to update CacheRefresh config; reason={}".format(req["message"]))
 
             # delay
             time.sleep(check_interval)

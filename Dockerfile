@@ -82,7 +82,6 @@ RUN mkdir -p /etc/certs
 RUN mkdir -p /cr
 
 COPY scripts /opt/cr-rotate/scripts
-RUN chmod +x /opt/cr-rotate/scripts/entrypoint.sh
 
 ENTRYPOINT ["tini", "-g", "--"]
-CMD ["/opt/cr-rotate/scripts/entrypoint.sh"]
+CMD ["sh", "/opt/cr-rotate/scripts/entrypoint.sh"]
