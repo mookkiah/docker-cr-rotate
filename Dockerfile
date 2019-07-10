@@ -67,11 +67,22 @@ ENV GLUU_SECRET_KUBERNETES_NAMESPACE default
 ENV GLUU_SECRET_KUBERNETES_SECRET gluu
 ENV GLUU_SECRET_KUBERNETES_USE_KUBE_CONFIG false
 
+# ===============
+# Persistence ENV
+# ===============
+
+# available options: couchbase, ldap, hybrid
+ENV GLUU_PERSISTENCE_TYPE ldap
+# only takes affect when GLUU_PERSISTENCE_TYPE is hybrid
+# available options: default, user, cache, site, statistic
+ENV GLUU_PERSISTENCE_LDAP_MAPPING default
+ENV GLUU_COUCHBASE_URL localhost
+ENV GLUU_LDAP_URL localhost:1636
+
 # ===========
 # Generic ENV
 # ===========
 
-ENV GLUU_LDAP_URL localhost:1636
 ENV GLUU_CONTAINER_METADATA docker
 
 # ==========
