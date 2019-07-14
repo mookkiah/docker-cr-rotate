@@ -7,7 +7,8 @@ LABEL maintainer="Gluu Inc. <support@gluu.org>"
 # ===============
 RUN apk update && apk add --no-cache \
     py-pip \
-    wget
+    wget \
+    git
 
 # ====
 # Tini

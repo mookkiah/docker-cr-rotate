@@ -2,39 +2,28 @@
 updating cache refresh in gluu server
 Author : Mohammad Abudayyeh
 """
-import base64
 import logging
+import logging.config
 import os
 import sys
 import time
 
 import docker
-import pyDes
 from kubernetes import client, config
 from kubernetes.stream import stream
 from ldap3 import Server, Connection, MODIFY_REPLACE
 
-from cbm import CBM
-from gluulib import get_manager
+from pygluu.containerlib import get_manager
+from pygluu.containerlib.utils import decode_text
 
-logger = logging.getLogger("entrypoint")
-logger.setLevel(logging.INFO)
-ch = logging.StreamHandler()
-fmt = logging.Formatter('%(levelname)s - %(name)s - %(asctime)s - %(message)s')
-ch.setFormatter(fmt)
-logger.addHandler(ch)
+from cbm import CBM
+from settings import LOGGING_CONFIG
 
 SIGNAL_IP = '999.888.999.777'
 DEFAULT_IP = '255.255.255.255'
 
-
-def decrypt_text(encrypted_text, key):
-    """Decodes encoded text.
-    """
-    cipher = pyDes.triple_des(b"{}".format(key), pyDes.ECB,
-                              padmode=pyDes.PAD_PKCS5)
-    encrypted_text = b"{}".format(base64.b64decode(encrypted_text))
-    return cipher.decrypt(encrypted_text)
+logging.config.dictConfig(LOGGING_CONFIG)
+logger = logging.getLogger("entrypoint")
 
 
 class BaseClient(object):
@@ -243,7 +232,7 @@ class CacheRefreshRotator(object):
         if backend_type == "ldap":
             host = os.environ.get("GLUU_LDAP_URL", "localhost:1636")
             user = manager.config.get("ldap_binddn")
-            password = decrypt_text(
+            password = decode_text(
                 manager.secret.get("encoded_ox_ldap_pw"),
                 manager.secret.get("encoded_salt"),
             )
@@ -251,7 +240,7 @@ class CacheRefreshRotator(object):
         else:
             host = os.environ.get("GLUU_COUCHBASE_URL", "localhost")
             user = manager.config.get("couchbase_server_user")
-            password = decrypt_text(
+            password = decode_text(
                 manager.secret.get("encoded_couchbase_server_pw"),
                 manager.secret.get("encoded_salt"),
             )

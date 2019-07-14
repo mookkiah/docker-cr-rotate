@@ -45,14 +45,14 @@ fi
 if [ "$GLUU_CONTAINER_METADATA" != "docker" ] && [ "$GLUU_CONTAINER_METADATA" != "kubernetes" ]; then
     echo "Warning: invalid value for GLUU_CONTAINER_METADATA environment variable; fallback to Docker metadata"
     echo ""
-    GLUU_CONTAINER_METADATA="docker"
+    export GLUU_CONTAINER_METADATA="docker"
 fi
 
 
 if [ -f /etc/redhat-release ]; then
-    source scl_source enable python27 && python /opt/cr-rotate/scripts/wait_for.py --deps="$deps"
+    source scl_source enable python27 && gluu-wait --deps="$deps"
     source scl_source enable python27 && python /opt/cr-rotate/scripts/entrypoint.py
 else
-    python /opt/cr-rotate/scripts/wait_for.py --deps="$deps"
+    gluu-wait --deps="$deps"
     python /opt/cr-rotate/scripts/entrypoint.py
 fi
