@@ -98,9 +98,10 @@ LABEL name="CacheRefreshRotate" \
     summary="Gluu CacheRefreshRotate" \
     description="Manage CacheRefresh IP rotation"
 
-RUN mkdir -p /etc/certs /cr
-
 COPY scripts /app/scripts
+
+RUN mkdir -p /etc/certs /cr \
+    && chmod +x /app/scripts/entrypoint.sh
 
 ENTRYPOINT ["tini", "-g", "--"]
 CMD ["/app/scripts/entrypoint.sh"]
