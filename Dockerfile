@@ -1,7 +1,5 @@
 FROM alpine:3.9
 
-LABEL maintainer="Gluu Inc. <support@gluu.org>"
-
 # ===============
 # Alpine packages
 # ===============
@@ -91,10 +89,18 @@ ENV GLUU_CONTAINER_METADATA docker
 # ==========
 # misc stuff
 # ==========
-WORKDIR /opt/cr-rotate
+
+LABEL name="CacheRefreshRotate" \
+    maintainer="Gluu Inc. <support@gluu.org>" \
+    vendor="Gluu Federation" \
+    version="4.0.0" \
+    release="dev" \
+    summary="Gluu CacheRefreshRotate" \
+    description="Manage CacheRefresh IP rotation"
+
 RUN mkdir -p /etc/certs /cr
 
-COPY scripts /opt/cr-rotate/scripts
+COPY scripts /app/scripts
 
 ENTRYPOINT ["tini", "-g", "--"]
-CMD ["sh", "/opt/cr-rotate/scripts/entrypoint.sh"]
+CMD ["/app/scripts/entrypoint.sh"]

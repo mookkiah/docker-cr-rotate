@@ -24,10 +24,10 @@ esac
 # check mapping used by LDAP
 if [ "${GLUU_PERSISTENCE_TYPE}" = "hybrid" ]; then
     case "${GLUU_PERSISTENCE_LDAP_MAPPING}" in
-        default|user|cache|site|statistic|authorization)
+        default|user|cache|site|statistic|authorization|token|client)
             ;;
         *)
-            echo "unsupported GLUU_PERSISTENCE_LDAP_MAPPING value; please choose 'default', 'user', 'cache', 'site', 'statistic', or 'authorization'"
+            echo "unsupported GLUU_PERSISTENCE_LDAP_MAPPING value; please choose 'default', 'user', 'cache', 'site', 'statistic', 'authorization', 'token', or 'client'"
             exit 1
             ;;
     esac
@@ -51,8 +51,8 @@ fi
 
 if [ -f /etc/redhat-release ]; then
     source scl_source enable python27 && gluu-wait --deps="$deps"
-    source scl_source enable python27 && python /opt/cr-rotate/scripts/entrypoint.py
+    source scl_source enable python27 && python /app/scripts/entrypoint.py
 else
     gluu-wait --deps="$deps"
-    python /opt/cr-rotate/scripts/entrypoint.py
+    python /app/scripts/entrypoint.py
 fi
