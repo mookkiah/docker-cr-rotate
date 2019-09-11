@@ -15,6 +15,8 @@ from ldap3 import Server, Connection, MODIFY_REPLACE
 
 from pygluu.containerlib import get_manager
 from pygluu.containerlib.utils import decode_text
+from pygluu.containerlib.persistence.couchbase import get_couchbase_user
+from pygluu.containerlib.persistence.couchbase import get_couchbase_password
 
 from cbm import CBM
 from settings import LOGGING_CONFIG
@@ -239,11 +241,8 @@ class CacheRefreshRotator(object):
             backend_cls = LDAPBackend
         else:
             host = os.environ.get("GLUU_COUCHBASE_URL", "localhost")
-            user = manager.config.get("couchbase_server_user")
-            password = decode_text(
-                manager.secret.get("encoded_couchbase_server_pw"),
-                manager.secret.get("encoded_salt"),
-            )
+            user = get_couchbase_user(manager)
+            password = get_couchbase_password(manager)
             backend_cls = CouchbaseBackend
 
         self.backend = backend_cls(host, user, password)

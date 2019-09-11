@@ -97,7 +97,7 @@ LABEL name="CacheRefreshRotate" \
 
 COPY scripts /app/scripts
 
-RUN mkdir -p /etc/certs /cr \
+RUN mkdir -p /etc/certs /cr /etc/gluu/conf \
     && chmod +x /app/scripts/entrypoint.sh
 
 ENTRYPOINT ["tini", "-g", "--"]
