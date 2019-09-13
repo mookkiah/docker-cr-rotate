@@ -81,7 +81,8 @@ ENV GLUU_PERSISTENCE_TYPE=ldap \
 # Generic ENV
 # ===========
 
-ENV GLUU_CONTAINER_METADATA docker
+ENV GLUU_CONTAINER_METADATA=docker \
+    GLUU_WAIT_SLEEP_DURATION=10
 
 # ==========
 # misc stuff
