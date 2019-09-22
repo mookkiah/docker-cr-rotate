@@ -4,10 +4,9 @@ FROM alpine:3.9
 # Alpine packages
 # ===============
 
-RUN apk update && apk add --no-cache \
-    py-pip \
-    wget \
-    git
+RUN apk update \
+    && apk add --no-cache py-pip \
+    && apk add --no-cache --virtual build-deps wget git
 
 # ====
 # Tini
@@ -22,8 +21,14 @@ RUN wget -q https://github.com/krallin/tini/releases/download/v0.18.0/tini-stati
 
 COPY requirements.txt /tmp/requirements.txt
 RUN pip install -U pip \
-    && pip install --no-cache-dir -r /tmp/requirements.txt \
-    && apk del git
+    && pip install --no-cache-dir -r /tmp/requirements.txt
+
+# =======
+# Cleanup
+# =======
+
+RUN apk del build-deps \
+    && rm -rf /var/cache/apk/*
 
 # =======
 # License
@@ -74,7 +79,11 @@ ENV GLUU_SECRET_ADAPTER=vault \
 
 ENV GLUU_PERSISTENCE_TYPE=ldap \
     GLUU_PERSISTENCE_LDAP_MAPPING=default \
+    GLUU_PERSISTENCE_LDAP_MAPPING=default \
     GLUU_COUCHBASE_URL=localhost \
+    GLUU_COUCHBASE_USER=admin \
+    GLUU_COUCHBASE_CERT_FILE=/etc/certs/couchbase.crt \
+    GLUU_COUCHBASE_PASSWORD_FILE=/etc/gluu/conf/couchbase_password \
     GLUU_LDAP_URL=localhost:1636
 
 # ===========
@@ -82,6 +91,7 @@ ENV GLUU_PERSISTENCE_TYPE=ldap \
 # ===========
 
 ENV GLUU_CONTAINER_METADATA=docker \
+    GLUU_WAIT_MAX_TIME=300 \
     GLUU_WAIT_SLEEP_DURATION=10
 
 # ==========
