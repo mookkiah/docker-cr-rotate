@@ -17,9 +17,8 @@ from pygluu.containerlib import get_manager
 from pygluu.containerlib.utils import decode_text
 from pygluu.containerlib.persistence.couchbase import get_couchbase_user
 from pygluu.containerlib.persistence.couchbase import get_couchbase_password
-from pygluu.containerlib.persistence.couchbase import resolve_couchbase_host
+from pygluu.containerlib.persistence.couchbase import CouchbaseClient
 
-from cbm import CBM
 from settings import LOGGING_CONFIG
 
 SIGNAL_IP = '999.888.999.777'
@@ -185,8 +184,7 @@ class LDAPBackend(BaseBackend):
 
 class CouchbaseBackend(BaseBackend):
     def __init__(self, host, user, password):
-        active_host = resolve_couchbase_host(host, user, password)
-        self.backend = CBM(active_host, user, password)
+        self.backend = CouchbaseClient(host, user, password)
 
     def get_configuration(self):
         req = self.backend.exec_query(
