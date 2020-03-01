@@ -256,7 +256,7 @@ class CacheRefreshRotator(object):
             req = self.backend.update_configuration(config["id"], SIGNAL_IP)
 
             if req["success"]:
-                check_ip = config["oxTrustCacheRefreshServerIpAddress"]
+                check_ip = config.get("oxTrustCacheRefreshServerIpAddress", DEFAULT_IP)
                 logger.info("Signal has been sent")
                 logger.info("Waiting for response...It may take up to 5 mins")
                 process_time = 0
@@ -265,7 +265,7 @@ class CacheRefreshRotator(object):
 
                 while not check:
                     config = self.backend.get_configuration()
-                    check_ip = config["oxTrustCacheRefreshServerIpAddress"]
+                    check_ip = config.get("oxTrustCacheRefreshServerIpAddress", DEFAULT_IP)
                     endtime = time.time()
                     process_time = endtime - starttime
 
@@ -332,7 +332,7 @@ def main():
             signalon = False
 
             config = rotator.backend.get_configuration()
-            current_ip_in_ldap = config["oxTrustCacheRefreshServerIpAddress"]
+            current_ip_in_ldap = config.get("oxTrustCacheRefreshServerIpAddress", DEFAULT_IP)
             is_cr_enabled = config["gluuVdsCacheRefreshEnabled"] in ("enabled", True)
             # is_cr_enabled = True
 
@@ -362,7 +362,7 @@ def main():
                     logger.warn('Cache refresh is found to be disabled.')
 
                 config = rotator.backend.get_configuration()
-                current_ip_in_ldap = config["oxTrustCacheRefreshServerIpAddress"]
+                current_ip_in_ldap = config.get("oxTrustCacheRefreshServerIpAddress", DEFAULT_IP)
                 is_cr_enabled = config["gluuVdsCacheRefreshEnabled"] in ("enabled", True)
                 # is_cr_enabled = True
 
