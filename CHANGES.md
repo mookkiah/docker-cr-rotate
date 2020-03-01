@@ -2,6 +2,12 @@
 
 Here you can see an overview of changes between each release.
 
+## Version 4.0.1_03
+
+Released on March 2nd, 2020.
+
+* Fixed `KeyError` error while checking cache-refresh IP. Ref: https://github.com/GluuFederation/docker-cr-rotate/issues/7.
+
 ## Version 4.0.1_02
 
 Released on November 14th, 2019.
