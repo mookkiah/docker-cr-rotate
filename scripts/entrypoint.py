@@ -374,7 +374,7 @@ def main():
                     # Clean cache folder at oxtrust container
                     client.clean_snapshot(container)
 
-                    logger.info("Updating oxTrustCacheRefreshServerIpAddress to {} with IP {}".format(container.name, ip))
+                    logger.info("Updating oxTrustCacheRefreshServerIpAddress to IP address {}".format(ip))
                     req = rotator.backend.update_configuration(config["id"], ip)
                     if req["success"]:
                         logger.info("CacheRefresh config has been updated")
