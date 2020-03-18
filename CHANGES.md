@@ -2,6 +2,12 @@
 
 Here you can see an overview of changes between each release.
 
+## Version 4.1.0_02
+
+Released on March 19th, 2020.
+
+* Fixed attribute error on k8s.
+
 ## Version 4.1.0_01
 
 Released on March 5th, 2020.
