@@ -91,6 +91,7 @@ ENV GLUU_PERSISTENCE_TYPE=ldap \
 # ===========
 
 ENV GLUU_CONTAINER_METADATA=docker \
+    GLUU_CR_ROTATION_CHECK=300 \
     GLUU_WAIT_MAX_TIME=300 \
     GLUU_WAIT_SLEEP_DURATION=10
 
@@ -101,7 +102,7 @@ ENV GLUU_CONTAINER_METADATA=docker \
 LABEL name="CacheRefreshRotate" \
     maintainer="Gluu Inc. <support@gluu.org>" \
     vendor="Gluu Federation" \
-    version="4.1.0" \
+    version="4.1.1" \
     release="02" \
     summary="Gluu CacheRefreshRotate" \
     description="Manage CacheRefresh IP rotation"
@@ -112,4 +113,4 @@ RUN mkdir -p /etc/certs /cr /etc/gluu/conf \
     && chmod +x /app/scripts/entrypoint.sh
 
 ENTRYPOINT ["tini", "-g", "--"]
-CMD ["/app/scripts/entrypoint.sh"]
+CMD ["sh", "/app/scripts/entrypoint.sh"]
