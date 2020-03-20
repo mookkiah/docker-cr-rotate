@@ -5,7 +5,7 @@ CacheRefreshRotation is a special container to monitor cache refresh on a specif
 ## Versions
 
 - Stable: `gluufederation/cr-rotate:4.1.0_01`
-- Unstable: `gluufederation/cr-rotate:4.1.0_dev`
+- Unstable: `gluufederation/cr-rotate:4.1.1_dev`
 
 Refer to [Changelog](./CHANGES.md) for details on new features, bug fixes, or older releases.
 
@@ -73,10 +73,17 @@ The following environment variables are supported by the container:
     apiVersion: apps/v1
     kind: StatefulSet
     metadata:
-        name: oxtrust
-        labels:
+      name: oxtrust
+      labels:
         app: oxtrust
         APP_NAME: oxtrust
+    spec:
+      serviceName: oxtrust
+      template:
+        metadata:
+          labels:
+            app: oxtrust
+            APP_NAME: oxtrust
     ```
 
 1.  Set the appropriate `GLUU_CONTAINER_METADATA` environment variable.
