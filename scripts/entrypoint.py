@@ -62,7 +62,7 @@ class DockerClient(BaseClient):
         # networks = container.attrs["NetworkSettings"]
         # network = container.attrs["NetworkSettings"]["Networks"].keys()[0]
         # return network["IPAddress"]
-        for _, network in container.attrs["NetworkSettings"]["Networks"].iteritems():
+        for _, network in container.attrs["NetworkSettings"]["Networks"].items():
             return network["IPAddress"]
 
     def clean_snapshot(self, container):
