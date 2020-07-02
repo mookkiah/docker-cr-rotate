@@ -34,16 +34,8 @@ class DockerMeta(_DockerMeta):
 
 class KubernetesMeta(_KubernetesMeta):
     def clean_snapshot(self, container):
-        self.exec_cmd(
-            container,
-            ['/bin/sh', '-c', 'rm -rf /var/ox/identity/cr-snapshots'],
-        )
-
-        self.exec_cmd(
-            self.client.connect_get_namespaced_pod_exec,
-            container
-            ['/bin/sh', '-c', 'mkdir -p /var/ox/identity/cr-snapshots'],
-        )
+        self.exec_cmd(container, "rm -rf /var/ox/identity/cr-snapshots")
+        self.exec_cmd(container, "mkdir -p /var/ox/identity/cr-snapshots")
 
 
 class BaseBackend(object):
