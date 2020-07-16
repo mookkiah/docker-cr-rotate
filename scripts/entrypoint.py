@@ -14,8 +14,8 @@ from pygluu.containerlib.utils import decode_text
 from pygluu.containerlib.persistence.couchbase import get_couchbase_user
 from pygluu.containerlib.persistence.couchbase import get_couchbase_password
 from pygluu.containerlib.persistence.couchbase import CouchbaseClient
-from pygluu.containerlib.meta import DockerMeta as _DockerMeta
-from pygluu.containerlib.meta import KubernetesMeta as _KubernetesMeta
+from pygluu.containerlib.meta import DockerMeta
+from pygluu.containerlib.meta import KubernetesMeta
 
 from settings import LOGGING_CONFIG
 
@@ -26,16 +26,9 @@ logging.config.dictConfig(LOGGING_CONFIG)
 logger = logging.getLogger("entrypoint")
 
 
-class DockerMeta(_DockerMeta):
-    def clean_snapshot(self, container):
-        self.exec_cmd(container, "rm -rf /var/ox/identity/cr-snapshots/")
-        self.exec_cmd(container, "mkdir -p /var/ox/identity/cr-snapshots")
-
-
-class KubernetesMeta(_KubernetesMeta):
-    def clean_snapshot(self, container):
-        self.exec_cmd(container, "rm -rf /var/ox/identity/cr-snapshots")
-        self.exec_cmd(container, "mkdir -p /var/ox/identity/cr-snapshots")
+def clean_snapshot(metaclient, container):
+    metaclient.exec_cmd(container, "rm -rf /var/ox/identity/cr-snapshots")
+    metaclient.exec_cmd(container, "mkdir -p /var/ox/identity/cr-snapshots")
 
 
 class BaseBackend(object):
@@ -279,7 +272,7 @@ def main():
                             client.get_container_name(container), client.get_container_ip(container)
                         )
                     )
-                    client.clean_snapshot(container)
+                    clean_snapshot(client, container)
 
                     logger.info("Updating oxTrustCacheRefreshServerIpAddress to IP address {}".format(ip))
                     req = rotator.backend.update_configuration(config["id"], ip)
