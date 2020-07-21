@@ -5,7 +5,7 @@ CacheRefreshRotation is a special container to monitor cache refresh on a specif
 ## Versions
 
 - Stable: `gluufederation/cr-rotate:4.2.0_01`
-- Unstable: `gluufederation/cr-rotate:4.2.0_dev`
+- Unstable: `gluufederation/cr-rotate:4.2.1_dev`
 
 Refer to [Changelog](./CHANGES.md) for details on new features, bug fixes, or older releases.
 
