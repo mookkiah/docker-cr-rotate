@@ -5,12 +5,8 @@ Author : Mohammad Abudayyeh
 import logging
 import logging.config
 import os
-import sys
 import time
 
-import docker
-from kubernetes import client, config
-from kubernetes.stream import stream
 from ldap3 import Server, Connection, MODIFY_REPLACE
 
 from pygluu.containerlib import get_manager
@@ -18,6 +14,8 @@ from pygluu.containerlib.utils import decode_text
 from pygluu.containerlib.persistence.couchbase import get_couchbase_user
 from pygluu.containerlib.persistence.couchbase import get_couchbase_password
 from pygluu.containerlib.persistence.couchbase import CouchbaseClient
+from pygluu.containerlib.meta import DockerMeta
+from pygluu.containerlib.meta import KubernetesMeta
 
 from settings import LOGGING_CONFIG
 
@@ -28,112 +26,9 @@ logging.config.dictConfig(LOGGING_CONFIG)
 logger = logging.getLogger("entrypoint")
 
 
-class BaseClient(object):
-    def get_oxtrust_containers(self):
-        """Gets oxTrust containers.
-
-        Subclass __MUST__ implement this method.
-        """
-        raise NotImplementedError
-
-    def get_container_ip(self, container):
-        """Gets container's IP address.
-
-        Subclass __MUST__ implement this method.
-        """
-        raise NotImplementedError
-
-    def clean_snapshot(self, container):
-        """Cleanups cache refresh snapshots directory.
-
-        Subclass __MUST__ implement this method.
-        """
-        raise NotImplementedError
-
-
-class DockerClient(BaseClient):
-    def __init__(self, base_url="unix://var/run/docker.sock"):
-        self.client = docker.DockerClient(base_url=base_url)
-
-    def get_oxtrust_containers(self):
-        return self.client.containers.list(filters={'label': 'APP_NAME=oxtrust'})
-
-    def get_container_ip(self, container):
-        # networks = container.attrs["NetworkSettings"]
-        # network = container.attrs["NetworkSettings"]["Networks"].keys()[0]
-        # return network["IPAddress"]
-        for _, network in container.attrs["NetworkSettings"]["Networks"].iteritems():
-            return network["IPAddress"]
-
-    def clean_snapshot(self, container):
-        logger.info(
-            "Cleaning cache folders for {} with IP {}".format(
-                container.name, self.get_container_ip(container),
-            )
-        )
-        container.exec_run("rm -rf /var/ox/identity/cr-snapshots/")
-        container.exec_run("mkdir -p /var/ox/identity/cr-snapshots")
-
-
-class KubernetesClient(BaseClient):
-    def __init__(self):
-        config_loaded = False
-
-        try:
-            config.load_incluster_config()
-            config_loaded = True
-        except config.config_exception.ConfigException:
-            logger.warn("Unable to load in-cluster configuration; trying to load from Kube config file")
-            try:
-                config.load_kube_config()
-                config_loaded = True
-            except (IOError, config.config_exception.ConfigException) as exc:
-                logger.warn("Unable to load Kube config; reason={}".format(exc))
-
-        if not config_loaded:
-            logger.error("Unable to load in-cluster or Kube config")
-            sys.exit(1)
-
-        cli = client.CoreV1Api()
-        cli.api_client.configuration.assert_hostname = False
-        self.client = cli
-
-    def get_oxtrust_containers(self):
-        return self.client.list_pod_for_all_namespaces(
-            label_selector='APP_NAME=oxtrust'
-        ).items
-
-    def get_container_ip(self, container):
-        return container.status.pod_ip
-
-    def clean_snapshot(self, container):
-        logger.info(
-            "Cleaning cache folders for {} with IP {}".format(
-                container.metadata.name, self.get_container_ip(container)
-            )
-        )
-
-        stream(
-            self.client.connect_get_namespaced_pod_exec,
-            container.metadata.name,
-            container.metadata.namespace,
-            command=['/bin/sh', '-c', 'rm -rf /var/ox/identity/cr-snapshots'],
-            stderr=True,
-            stdin=True,
-            stdout=True,
-            tty=False,
-        )
-
-        stream(
-            self.client.connect_get_namespaced_pod_exec,
-            container.metadata.name,
-            container.metadata.namespace,
-            command=['/bin/sh', '-c', 'mkdir -p /var/ox/identity/cr-snapshots'],
-            stderr=True,
-            stdin=True,
-            stdout=True,
-            tty=False,
-        )
+def clean_snapshot(metaclient, container):
+    metaclient.exec_cmd(container, "rm -rf /var/ox/identity/cr-snapshots")
+    metaclient.exec_cmd(container, "mkdir -p /var/ox/identity/cr-snapshots")
 
 
 class BaseBackend(object):
@@ -321,13 +216,13 @@ def main():
     rotator = CacheRefreshRotator(manager, persistence_type, ldap_mapping)
 
     if GLUU_CONTAINER_METADATA == "kubernetes":
-        client = KubernetesClient()
+        client = KubernetesMeta()
     else:
-        client = DockerClient()
+        client = DockerMeta()
 
     try:
         while True:
-            oxtrust_containers = client.get_oxtrust_containers()
+            oxtrust_containers = client.get_containers("APP_NAME=oxtrust")
             oxtrust_ip_pool = [client.get_container_ip(container) for container in oxtrust_containers]
             signalon = False
 
@@ -372,7 +267,12 @@ def main():
                     logger.info("Current oxTrustCacheRefreshServerIpAddress: {}".format(current_ip_in_ldap))
 
                     # Clean cache folder at oxtrust container
-                    client.clean_snapshot(container)
+                    logger.info(
+                        "Cleaning cache folders for {} with IP {}".format(
+                            client.get_container_name(container), client.get_container_ip(container)
+                        )
+                    )
+                    clean_snapshot(client, container)
 
                     logger.info("Updating oxTrustCacheRefreshServerIpAddress to IP address {}".format(ip))
                     req = rotator.backend.update_configuration(config["id"], ip)

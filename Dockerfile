@@ -5,23 +5,17 @@ FROM alpine:3.9
 # ===============
 
 RUN apk update \
-    && apk add --no-cache py-pip \
+    && apk add --no-cache py3-pip tini \
     && apk add --no-cache --virtual build-deps wget git
-
-# ====
-# Tini
-# ====
-
-RUN wget -q https://github.com/krallin/tini/releases/download/v0.18.0/tini-static -O /usr/bin/tini \
-    && chmod +x /usr/bin/tini
 
 # ======
 # Python
 # ======
 
+RUN apk add --no-cache py3-cryptography
 COPY requirements.txt /tmp/requirements.txt
-RUN pip install -U pip \
-    && pip install --no-cache-dir -r /tmp/requirements.txt
+RUN pip3 install -U pip \
+    && pip3 install --no-cache-dir -r /tmp/requirements.txt
 
 # =======
 # Cleanup
@@ -102,8 +96,8 @@ ENV GLUU_CONTAINER_METADATA=docker \
 LABEL name="CacheRefreshRotate" \
     maintainer="Gluu Inc. <support@gluu.org>" \
     vendor="Gluu Federation" \
-    version="4.1.1" \
-    release="02" \
+    version="4.2.0" \
+    release="01" \
     summary="Gluu CacheRefreshRotate" \
     description="Manage CacheRefresh IP rotation"
 
