@@ -1,4 +1,4 @@
-GLUU_VERSION=4.2.1
+GLUU_VERSION=4.2.2
 IMAGE_NAME=gluufederation/cr-rotate
 UNSTABLE_VERSION=dev
 
