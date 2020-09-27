@@ -97,8 +97,8 @@ ENV GLUU_CONTAINER_METADATA=docker \
 LABEL name="CacheRefreshRotate" \
     maintainer="Gluu Inc. <support@gluu.org>" \
     vendor="Gluu Federation" \
-    version="4.2.2" \
-    release="dev" \
+    version="4.2.1" \
+    release="02" \
     summary="Gluu CacheRefreshRotate" \
     description="Manage CacheRefresh IP rotation"
 

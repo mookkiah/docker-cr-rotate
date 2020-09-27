@@ -5,7 +5,7 @@ CacheRefreshRotation is a special container to monitor cache refresh on a specif
 ## Versions
 
 See [Releases](https://github.com/GluuFederation/docker-cr-rotate/releases) for stable versions.
-For bleeding-edge/unstable version, use `gluufederation/cr-rotate:4.2.2_dev`.
+For bleeding-edge/unstable version, use `gluufederation/cr-rotate:4.2.1_dev`.
 
 ## Environment Variables
 
