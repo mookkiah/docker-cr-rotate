@@ -175,13 +175,13 @@ class CacheRefreshRotator(object):
                     if req["success"]:
                         logger.info("No nodes found.Cache Refresh updated ip to default. Please add oxtrust containers")
                     else:
-                        logger.warn("Unable to update CacheRefresh to defaults; reason={}".format(req["message"]))
+                        logger.warning("Unable to update CacheRefresh to defaults; reason={}".format(req["message"]))
                 else:
                     logger.info("Oxtrust containers found at other nodes. Cache Refresh has been updated")
             else:
-                logger.warn("Unable to send signal; reason={}".format(req["message"]))
+                logger.warning("Unable to send signal; reason={}".format(req["message"]))
         except Exception as e:
-            logger.warn("Unable to update CacheRefresh config; reason={}".format(e))
+            logger.warning("Unable to update CacheRefresh config; reason={}".format(e))
 
 
 def write_master_ip(ip):
@@ -254,7 +254,7 @@ def main():
 
                 # The user has disabled the CR or CR is not active
                 if not is_cr_enabled:
-                    logger.warn('Cache refresh is found to be disabled.')
+                    logger.warning('Cache refresh is found to be disabled.')
 
                 config = rotator.backend.get_configuration()
                 current_ip_in_ldap = config.get("oxTrustCacheRefreshServerIpAddress", DEFAULT_IP)
@@ -279,12 +279,12 @@ def main():
                     if req["success"]:
                         logger.info("CacheRefresh config has been updated")
                     else:
-                        logger.warn("Unable to update CacheRefresh config; reason={}".format(req["message"]))
+                        logger.warning("Unable to update CacheRefresh config; reason={}".format(req["message"]))
 
             # delay
             time.sleep(check_interval)
     except KeyboardInterrupt:
-        logger.warn("Canceled by user; exiting ...")
+        logger.warning("Canceled by user; exiting ...")
 
 
 if __name__ == "__main__":
