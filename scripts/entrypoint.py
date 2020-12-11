@@ -82,9 +82,10 @@ class CouchbaseBackend(BaseBackend):
         self.backend = CouchbaseClient(host, user, password)
 
     def get_configuration(self):
+        bucket_prefix = os.environ.get("GLUU_COUCHBASE_BUCKET_PREFIX", "gluu")
         req = self.backend.exec_query(
             "SELECT oxTrustCacheRefreshServerIpAddress, gluuVdsCacheRefreshEnabled "
-            "FROM `gluu` "
+            f"FROM `{bucket_prefix}` "
             "USE KEYS 'configuration'"
         )
 
@@ -100,8 +101,9 @@ class CouchbaseBackend(BaseBackend):
         return config
 
     def update_configuration(self, id_, ip):
+        bucket_prefix = os.environ.get("GLUU_COUCHBASE_BUCKET_PREFIX", "gluu")
         req = self.backend.exec_query(
-            "UPDATE `gluu` "
+            f"UPDATE `{bucket_prefix}` "
             "USE KEYS '{0}' "
             "SET oxTrustCacheRefreshServerIpAddress='{1}' "
             "RETURNING oxTrustCacheRefreshServerIpAddress".format(id_, ip)
@@ -198,10 +200,10 @@ def check_master_ip(ip):
 
 
 def main():
-    GLUU_CONTAINER_METADATA = os.environ.get("GLUU_CONTAINER_METADATA", "docker")
+    GLUU_CONTAINER_METADATA = os.environ.get("GLUU_CONTAINER_METADATA", "docker")  # noqa: N806
 
     # check interval (by default per 5 mins)
-    GLUU_CR_ROTATION_CHECK = os.environ.get("GLUU_CR_ROTATION_CHECK", 60 * 5)
+    GLUU_CR_ROTATION_CHECK = os.environ.get("GLUU_CR_ROTATION_CHECK", 60 * 5)  # noqa: N806
 
     try:
         check_interval = int(GLUU_CR_ROTATION_CHECK)
