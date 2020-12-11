@@ -98,7 +98,7 @@ LABEL name="CacheRefreshRotate" \
     maintainer="Gluu Inc. <support@gluu.org>" \
     vendor="Gluu Federation" \
     version="4.2.2" \
-    release="dev" \
+    release="01" \
     summary="Gluu CacheRefreshRotate" \
     description="Manage CacheRefresh IP rotation"
 
