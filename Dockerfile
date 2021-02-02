@@ -6,13 +6,12 @@ FROM alpine:3.12
 
 RUN apk update \
     && apk add --no-cache py3-pip tini \
-    && apk add --no-cache --virtual build-deps wget git
+    && apk add --no-cache --virtual build-deps wget git gcc musl-dev python3-dev libffi-dev openssl-dev
 
 # ======
 # Python
 # ======
 
-RUN apk add --no-cache py3-cryptography
 COPY requirements.txt /app/requirements.txt
 RUN pip3 install -U pip \
     && pip3 install --no-cache-dir -r /app/requirements.txt \
@@ -98,7 +97,7 @@ ENV GLUU_CONTAINER_METADATA=docker \
 LABEL name="CacheRefreshRotate" \
     maintainer="Gluu Inc. <support@gluu.org>" \
     vendor="Gluu Federation" \
-    version="4.2.2" \
+    version="4.2.3" \
     release="01" \
     summary="Gluu CacheRefreshRotate" \
     description="Manage CacheRefresh IP rotation"

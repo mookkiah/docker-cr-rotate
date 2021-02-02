@@ -5,7 +5,7 @@ CacheRefreshRotation is a special container to monitor cache refresh on a specif
 ## Versions
 
 See [Releases](https://github.com/GluuFederation/docker-cr-rotate/releases) for stable versions.
-For bleeding-edge/unstable version, use `gluufederation/cr-rotate:4.2.1_dev`.
+For bleeding-edge/unstable version, use `gluufederation/cr-rotate:4.2.3_dev`.
 
 ## Environment Variables
 
@@ -62,7 +62,7 @@ The following environment variables are supported by the container:
     ```sh
     docker run \
         --label APP_NAME=oxtrust \
-        gluufederation/oxtrust:4.2.1_02
+        gluufederation/oxtrust:4.2.3_dev
     ```
 
     **Kubernetes:**
@@ -94,7 +94,7 @@ The following environment variables are supported by the container:
     docker run \
       -e GLUU_CONTAINER_METADATA=docker \
       -v /var/run/docker.sock:/var/run/docker.sock \
-      gluufederation/cr-rotate:4.2.1_02
+      gluufederation/cr-rotate:4.2.3_dev
     ```
 
     **Kubernetes:**
