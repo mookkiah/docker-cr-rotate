@@ -7,13 +7,11 @@ import logging.config
 import os
 import time
 
-from ldap3 import Server, Connection, MODIFY_REPLACE
-
 from pygluu.containerlib import get_manager
-from pygluu.containerlib.utils import decode_text
 from pygluu.containerlib.persistence.couchbase import get_couchbase_user
 from pygluu.containerlib.persistence.couchbase import get_couchbase_password
 from pygluu.containerlib.persistence.couchbase import CouchbaseClient
+from pygluu.containerlib.persistence.ldap import LdapClient
 from pygluu.containerlib.meta import DockerMeta
 from pygluu.containerlib.meta import KubernetesMeta
 
@@ -31,7 +29,7 @@ def clean_snapshot(metaclient, container):
     metaclient.exec_cmd(container, "mkdir -p /var/ox/identity/cr-snapshots")
 
 
-class BaseBackend(object):
+class BaseBackend:
     def get_configuration(self):
         raise NotImplementedError
 
@@ -40,50 +38,51 @@ class BaseBackend(object):
 
 
 class LDAPBackend(BaseBackend):
-    def __init__(self, host, user, password):
-        ldap_server = Server(host, port=1636, use_ssl=True)
-        self.backend = Connection(ldap_server, user, password)
+    def __init__(self, manager):
+        self.client = LdapClient(manager)
 
     def get_configuration(self):
-        with self.backend as conn:
-            conn.search(
-                "ou=configuration,o=gluu",
-                '(objectclass=gluuConfiguration)',
-                attributes=['oxTrustCacheRefreshServerIpAddress',
-                            'gluuVdsCacheRefreshEnabled'],
-            )
+        entry = self.client.get(
+            "ou=configuration,o=gluu",
+            "(objectclass=gluuConfiguration)",
+            attributes=[
+                "oxTrustCacheRefreshServerIpAddress",
+                "gluuVdsCacheRefreshEnabled",
+            ],
+        )
 
-            if not conn.entries:
-                return {}
+        if not entry:
+            return {}
 
-            entry = conn.entries[0]
-            config = {
-                "id": entry.entry_dn,
-                "oxTrustCacheRefreshServerIpAddress": entry["oxTrustCacheRefreshServerIpAddress"][0],
-                "gluuVdsCacheRefreshEnabled": entry["gluuVdsCacheRefreshEnabled"][0],
-            }
-            return config
+        return {
+            "id": entry.entry_dn,
+            "oxTrustCacheRefreshServerIpAddress": entry["oxTrustCacheRefreshServerIpAddress"][0],
+            "gluuVdsCacheRefreshEnabled": entry["gluuVdsCacheRefreshEnabled"][0],
+        }
 
     def update_configuration(self, id_, ip):
-        with self.backend as conn:
-            conn.modify(
-                id_,
-                {'oxTrustCacheRefreshServerIpAddress': [(MODIFY_REPLACE, [ip])]}
-            )
-            result = {
-                "success": conn.result["description"] == "success",
-                "message": conn.result["message"],
-            }
-            return result
+        modified, msg = self.client.modify(
+            id_,
+            attributes={
+                "oxTrustCacheRefreshServerIpAddress": [(self.client.MODIFY_REPLACE, [ip])]
+            },
+        )
+        return {
+            "success": modified,
+            "message": msg,
+        }
 
 
 class CouchbaseBackend(BaseBackend):
-    def __init__(self, host, user, password):
-        self.backend = CouchbaseClient(host, user, password)
+    def __init__(self, manager):
+        host = os.environ.get("GLUU_COUCHBASE_URL", "localhost")
+        user = get_couchbase_user(manager)
+        password = get_couchbase_password(manager)
+        self.client = CouchbaseClient(host, user, password)
 
     def get_configuration(self):
         bucket_prefix = os.environ.get("GLUU_COUCHBASE_BUCKET_PREFIX", "gluu")
-        req = self.backend.exec_query(
+        req = self.client.exec_query(
             "SELECT oxTrustCacheRefreshServerIpAddress, gluuVdsCacheRefreshEnabled "
             f"FROM `{bucket_prefix}` "
             "USE KEYS 'configuration'"
@@ -102,7 +101,7 @@ class CouchbaseBackend(BaseBackend):
 
     def update_configuration(self, id_, ip):
         bucket_prefix = os.environ.get("GLUU_COUCHBASE_BUCKET_PREFIX", "gluu")
-        req = self.backend.exec_query(
+        req = self.client.exec_query(
             f"UPDATE `{bucket_prefix}` "
             "USE KEYS '{0}' "
             "SET oxTrustCacheRefreshServerIpAddress='{1}' "
@@ -129,20 +128,11 @@ class CacheRefreshRotator(object):
 
         # resolve backend
         if backend_type == "ldap":
-            host = os.environ.get("GLUU_LDAP_URL", "localhost:1636")
-            user = manager.config.get("ldap_binddn")
-            password = decode_text(
-                manager.secret.get("encoded_ox_ldap_pw"),
-                manager.secret.get("encoded_salt"),
-            )
             backend_cls = LDAPBackend
         else:
-            host = os.environ.get("GLUU_COUCHBASE_URL", "localhost")
-            user = get_couchbase_user(manager)
-            password = get_couchbase_password(manager)
             backend_cls = CouchbaseBackend
 
-        self.backend = backend_cls(host, user, password)
+        self.backend = backend_cls(manager)
         self.manager = manager
 
     def send_signal(self):
@@ -182,7 +172,7 @@ class CacheRefreshRotator(object):
                     logger.info("Oxtrust containers found at other nodes. Cache Refresh has been updated")
             else:
                 logger.warning("Unable to send signal; reason={}".format(req["message"]))
-        except Exception as e:
+        except Exception as e:  # noqa: B902
             logger.warning("Unable to update CacheRefresh config; reason={}".format(e))
 
 
