@@ -214,6 +214,7 @@ def main():
 
     try:
         while True:
+            logger.info("Checking oxTrustCacheRefreshServerIpAddress ...")
             oxtrust_containers = client.get_containers("APP_NAME=oxtrust")
             oxtrust_ip_pool = [client.get_container_ip(container) for container in oxtrust_containers]
             signalon = False
