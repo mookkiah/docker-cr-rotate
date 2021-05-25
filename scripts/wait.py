@@ -7,6 +7,7 @@ from pygluu.containerlib import get_manager
 from pygluu.containerlib import wait_for
 from pygluu.containerlib.validators import validate_persistence_type
 from pygluu.containerlib.validators import validate_persistence_ldap_mapping
+from pygluu.containerlib.validators import validate_persistence_sql_dialect
 
 from settings import LOGGING_CONFIG
 
@@ -22,6 +23,10 @@ def main():
 
     ldap_mapping = os.environ.get("GLUU_PERSISTENCE_LDAP_MAPPING", "default")
     validate_persistence_ldap_mapping(persistence_type, ldap_mapping)
+
+    if persistence_type == "sql":
+        sql_dialect = os.environ.get("GLUU_SQL_DB_DIALECT", "mysql")
+        validate_persistence_sql_dialect(sql_dialect)
 
     meta = os.environ.get("GLUU_CONTAINER_METADATA")
     if meta not in CONTAINER_META_OPTS:

@@ -12,6 +12,8 @@ from pygluu.containerlib.persistence.couchbase import get_couchbase_user
 from pygluu.containerlib.persistence.couchbase import get_couchbase_password
 from pygluu.containerlib.persistence.couchbase import CouchbaseClient
 from pygluu.containerlib.persistence.ldap import LdapClient
+from pygluu.containerlib.persistence.sql import SQLClient
+from pygluu.containerlib.persistence.spanner import SpannerClient
 from pygluu.containerlib.meta import DockerMeta
 from pygluu.containerlib.meta import KubernetesMeta
 
@@ -115,9 +117,57 @@ class CouchbaseBackend(BaseBackend):
         return result
 
 
-class CacheRefreshRotator(object):
+class SQLBackend(BaseBackend):
+    def __init__(self, manager):
+        self.client = SQLClient(manager)
+
+    def get_configuration(self):
+        entry = self.client.get(
+            "gluuConfiguration",
+            "configuration",
+            [
+                "oxTrustCacheRefreshServerIpAddress",
+                "gluuVdsCacheRefreshEnabled",
+            ],
+        )
+
+        if not entry:
+            return {}
+
+        entry["id"] = "configuration"
+        return entry
+
+    def update_configuration(self, id_, ip):
+        updated = self.client.update(
+            "gluuConfiguration",
+            "configuration",
+            {
+                "oxTrustCacheRefreshServerIpAddress": ip,
+            },
+
+        )
+        return {
+            "success": updated,
+            "message": "",
+        }
+
+
+class SpannerBackend(SQLBackend):
+    def __init__(self, manager):
+        self.client = SpannerClient(manager)
+
+
+_backend_classes = {
+    "ldap": LDAPBackend,
+    "couchbase": CouchbaseBackend,
+    "sql": SQLBackend,
+    "spanner": SpannerBackend,
+}
+
+
+class CacheRefreshRotator:
     def __init__(self, manager, persistence_type, ldap_mapping="default"):
-        if persistence_type in ("ldap", "couchbase"):
+        if persistence_type in ("ldap", "couchbase", "sql", "spanner"):
             backend_type = persistence_type
         else:
             # persistence_type is hybrid
@@ -127,12 +177,8 @@ class CacheRefreshRotator(object):
                 backend_type = "couchbase"
 
         # resolve backend
-        if backend_type == "ldap":
-            backend_cls = LDAPBackend
-        else:
-            backend_cls = CouchbaseBackend
+        self.backend = _backend_classes[backend_type](manager)
 
-        self.backend = backend_cls(manager)
         self.manager = manager
 
     def send_signal(self):
