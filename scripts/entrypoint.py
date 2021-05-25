@@ -65,7 +65,7 @@ class LDAPBackend(BaseBackend):
     def update_configuration(self, id_, ip):
         modified, msg = self.client.modify(
             id_,
-            attributes={
+            {
                 "oxTrustCacheRefreshServerIpAddress": [(self.client.MODIFY_REPLACE, [ip])]
             },
         )
@@ -260,6 +260,7 @@ def main():
 
     try:
         while True:
+            logger.info("Checking oxTrustCacheRefreshServerIpAddress ...")
             oxtrust_containers = client.get_containers("APP_NAME=oxtrust")
             oxtrust_ip_pool = [client.get_container_ip(container) for container in oxtrust_containers]
             signalon = False
@@ -271,6 +272,8 @@ def main():
 
             if current_ip_in_ldap in oxtrust_ip_pool and is_cr_enabled:
                 write_master_ip(current_ip_in_ldap)
+            else:
+                signalon = True
 
             if check_master_ip(current_ip_in_ldap) and oxtrust_containers:
                 signalon = True
