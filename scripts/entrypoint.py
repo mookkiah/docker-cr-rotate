@@ -119,7 +119,7 @@ class CouchbaseBackend(BaseBackend):
 
 class SQLBackend(BaseBackend):
     def __init__(self, manager):
-        self.client = SQLClient(manager)
+        self.client = SQLClient()
 
     def get_configuration(self):
         entry = self.client.get(
@@ -154,7 +154,7 @@ class SQLBackend(BaseBackend):
 
 class SpannerBackend(SQLBackend):
     def __init__(self, manager):
-        self.client = SpannerClient(manager)
+        self.client = SpannerClient()
 
 
 _backend_classes = {
