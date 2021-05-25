@@ -63,7 +63,7 @@ class LDAPBackend(BaseBackend):
     def update_configuration(self, id_, ip):
         modified, msg = self.client.modify(
             id_,
-            attributes={
+            {
                 "oxTrustCacheRefreshServerIpAddress": [(self.client.MODIFY_REPLACE, [ip])]
             },
         )
