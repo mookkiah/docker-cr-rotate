@@ -163,12 +163,13 @@ class CacheRefreshRotator(object):
                 while not check:
                     config = self.backend.get_configuration()
                     check_ip = config.get("oxTrustCacheRefreshServerIpAddress", DEFAULT_IP)
+                    logger.info(f"check_ip {check_ip} SIGNAL_IP {SIGNAL_IP}")
                     endtime = time.time()
                     process_time = endtime - starttime
-
+                    logger.info(f"process_time {process_time}")
                     if check_ip != SIGNAL_IP or round(process_time) > 300.0:
                         check = True
-
+                    logger.info(f"sleeping 5")
                     time.sleep(5)
 
                 if check_ip == SIGNAL_IP:
@@ -187,13 +188,16 @@ class CacheRefreshRotator(object):
 
 
 def write_master_ip(ip):
+    logger.info(f"write_master_ip {ip} /cr/ip_file.txt")
     with open('/cr/ip_file.txt', 'w+') as ip_file:
         ip_file.write(str(ip))
 
 
 def check_master_ip(ip):
+    logger.info(f"ip {ip}")
     with open('/cr/ip_file.txt', 'a+') as ip_file:
         ip_master = ip_file.read().strip()
+        logger.info(f"ip_master {ip_master}")
     if str(ip) in ip_master:
         return True
     return False
@@ -201,7 +205,7 @@ def check_master_ip(ip):
 
 def main():
     GLUU_CONTAINER_METADATA = os.environ.get("GLUU_CONTAINER_METADATA", "docker")  # noqa: N806
-
+    logger.info(f"GLUU_CONTAINER_METADATA {GLUU_CONTAINER_METADATA}")
     # check interval (by default per 5 mins)
     GLUU_CR_ROTATION_CHECK = os.environ.get("GLUU_CR_ROTATION_CHECK", 60 * 5)  # noqa: N806
 
@@ -226,36 +230,43 @@ def main():
         while True:
             oxtrust_containers = client.get_containers("APP_NAME=oxtrust")
             oxtrust_ip_pool = [client.get_container_ip(container) for container in oxtrust_containers]
+            logger.info(f"oxtrust_ip_pool {oxtrust_ip_pool}")
             signalon = False
 
             config = rotator.backend.get_configuration()
             current_ip_in_ldap = config.get("oxTrustCacheRefreshServerIpAddress", DEFAULT_IP)
             is_cr_enabled = config["gluuVdsCacheRefreshEnabled"] in ("enabled", True)
+            logger.info(f"is_cr_enabled {is_cr_enabled} current_ip_in_ldap {current_ip_in_ldap}")
             # is_cr_enabled = True
 
             if current_ip_in_ldap in oxtrust_ip_pool and is_cr_enabled:
+                logger.info(f"current_ip_in_ldap is in oxtrust_ip_pool")
                 write_master_ip(current_ip_in_ldap)
-            else:
-                signalon = True
 
             if check_master_ip(current_ip_in_ldap) and oxtrust_containers:
+                logger.info(f"current_ip_in_ldap is in oxtrust_ip_pool")
                 signalon = True
+                logger.info(f"1. check_master_ip signalon {signalon}")
 
             if current_ip_in_ldap == SIGNAL_IP:
                 logger.info("Signal received. Setting new oxtrust container at this node to CacheRefresh ")
                 signalon = True
+                logger.info(f"2. current_ip_in_ldap signalon {signalon}")
 
             if not oxtrust_containers and is_cr_enabled:
+                logger.info("calling rotator.send_signal") 
                 rotator.send_signal()
+
 
             # If no oxtrust was found the previous would set ip to default. If later oxtrust was found
             if current_ip_in_ldap == DEFAULT_IP and is_cr_enabled and oxtrust_containers:
                 logger.info("Oxtrust containers found after resetting to defaults.")
                 signalon = True
+                logger.info(f"3. current_ip_in_ldap signalon {signalon}")
 
             for container in oxtrust_containers:
                 ip = client.get_container_ip(container)
-
+                logger.info(f"client container ip {ip} name {client.get_container_name(container)}")          
                 # The user has disabled the CR or CR is not active
                 if not is_cr_enabled:
                     logger.warning('Cache refresh is found to be disabled.')
@@ -263,7 +274,9 @@ def main():
                 config = rotator.backend.get_configuration()
                 current_ip_in_ldap = config.get("oxTrustCacheRefreshServerIpAddress", DEFAULT_IP)
                 is_cr_enabled = config["gluuVdsCacheRefreshEnabled"] in ("enabled", True)
+                logger.info(f"is_cr_enabled 2 {is_cr_enabled} signalon {signalon}")
                 # is_cr_enabled = True
+
 
                 # Check  the container has not been setup previously, the CR is enabled
                 if ip != current_ip_in_ldap and is_cr_enabled and current_ip_in_ldap not in oxtrust_ip_pool \
@@ -286,6 +299,7 @@ def main():
                         logger.warning("Unable to update CacheRefresh config; reason={}".format(req["message"]))
 
             # delay
+            logger.info(f"sleeping check_interval {check_interval}")
             time.sleep(check_interval)
     except KeyboardInterrupt:
         logger.warning("Canceled by user; exiting ...")
